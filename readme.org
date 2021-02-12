@@ -3,29 +3,9 @@
 #+property: header-args :noweb tangle
 #+auto_tangle: t
 
-This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  The
-file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org
-document, and has the typical breakdown in sections of an emacs
-package:
-
-#+begin_src emacs-lisp :tangle consult-notmuch.el
-;;; consult-notmuch.el --- Notmuch search using consult  -*- lexical-binding: t; -*-
-
-<<package-boilerplate>>
-
-;;; Code:
-
-<<dependencies>>
-
-<<customization>>
-
-<<private-functions>>
-
-<<public-functions>>
-
-(provide 'consult-notmuch)
-;;; consult-notmuch.el ends here
-#+end_src
+This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  It's
+code is tangled from this document (see [[*consult-notmuch.el][this section]] for its
+template).
 
 * Dependencies and installation
   We depend on the emacs packages [[https://github.com/minad/consult][consult]] and [[https://notmuchmail.org/][notmuch]]:
@@ -264,6 +244,30 @@ package:
       #+end_src
 
 * Package boilerplate
+*** consult-notmuch.el
+      The file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org
+      document, and has the typical breakdown in sections of an emacs
+      package:
+
+    #+begin_src emacs-lisp :tangle consult-notmuch.el
+      ;;; consult-notmuch.el --- Notmuch search using consult  -*- lexical-binding: t; -*-
+
+      <<package-boilerplate>>
+
+      ;;; Code:
+
+      <<dependencies>>
+
+      <<customization>>
+
+      <<private-functions>>
+
+      <<public-functions>>
+
+      (provide 'consult-notmuch)
+      ;;; consult-notmuch.el ends here
+    #+end_src
+
 *** ELPA headers
     The standard header boilerplate will make it publishable as a
     regular ELPA package
