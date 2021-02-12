@@ -1,8 +1,318 @@
 #+title:  consult-notmuch
+#+description:
+#+property: header-args :noweb tangle
+#+auto_tangle: t
 
-[[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].
+This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  The
+file ~consult-notmuch.el~ is automatically generated from this org
+document, and has the typical sectioning of an emacs package:
 
-Use it via any of the following auto-loaded commands:
+#+begin_src emacs-lisp :tangle consult-notmuch.el
+;;; consult-notmuch.el --- Notmuch search using consult  -*- lexical-binding: t; -*-
 
-  - ~consult-notmuch~
-  - ~consult-notmuch-tree~
+<<package-boilerplate>>
+
+;;; Code:
+
+<<dependencies>>
+
+<<customization>>
+
+<<private-functions>>
+
+<<public-functions>>
+
+(provide 'consult-notmuch)
+;;; consult-notmuch.el ends here
+#+end_src
+
+* Dependencies and installation
+  We depend on the emacs packages [[https://github.com/minad/consult][consult]] and [[https://notmuchmail.org/][notmuch]]:
+
+  #+begin_src emacs-lisp :noweb-ref dependencies
+    (require 'consult)
+    (require 'notmuch)
+  #+end_src
+
+  Both, as well as this package, are available in MELPA, so that's the
+  easiest way to install consult-notmuch.  You can also simply tangle
+  this document and put the resulting ~consult-notmuch.el~ file in your
+  load path (provided you have its dependencies in your load path
+  too), or obtain it from [[https://codeberg.org/jao/consult-notmuch][its git repository]].
+
+* Usage
+
+  Our objective is to use consult to perform notmuch queries, and show
+  their results in the completions minibuffer and, upon selection, on
+  a dedicated notmuch buffer.  Notmuch knows how to show either single
+  messages or full threads (or trees), so our public interface is
+  going to consist of two autoloaded commands:
+
+  #+begin_src emacs-lisp :noweb-ref public-functions
+    ;;;###autoload
+    (defun consult-notmuch (&optional initial)
+      "Search for your email in notmuch, showing single messages.
+    If given, use INITIAL as the starting point of the query."
+      (interactive)
+      (consult-notmuch--show (consult-notmuch--search initial)))
+
+    ;;;###autoload
+    (defun consult-notmuch-tree (&optional initial)
+      "Search for your email in notmuch, showing full candidate tree.
+    If given, use INITIAL as the starting point of the query."
+      (interactive)
+      (consult-notmuch--tree (consult-notmuch--search initial)))
+  #+end_src
+
+  They're implemented in terms of a common search driver, with the
+  only difference being how we show the final result of the
+  auto-completion call.
+
+* Customization
+  :PROPERTIES:
+  :header-args: :noweb-ref customization
+  :END:
+  As customary, we're going to use a customization group, as a
+  subgroup of notmuch's one:
+
+  #+begin_src emacs-lisp
+    (defgroup consult-notmuch nil
+      "Options for consult-notmuch."
+      :group 'Notmuch)
+
+  #+end_src
+
+*** Faces
+
+   We should be able to customize the faces used to display search
+   results in the minibuffer, which can have as defaults the faces
+   already defined by ~notmuch.el~:
+
+    #+begin_src emacs-lisp
+      (defface consult-notmuch-date-face
+        '((t :inherit notmuch-search-date :background nil))
+        "Face used in matching messages for the date field.")
+
+      (defface consult-notmuch-count-face
+        '((t :inherit notmuch-search-count :background nil))
+        "Face used in matching messages for the mail count field.")
+
+      (defface consult-notmuch-authors-face
+        '((t :inherit notmuch-search-matching-authors :background nil))
+        "Face used in matching messages for the authors field.")
+
+      (defface consult-notmuch-subject-face
+        '((t :inherit notmuch-search-subject :background nil))
+        "Face used in matching messages for the subject field.")
+    #+end_src
+
+*** Notmuch command
+    Usually, we won't need to customize the command we pass to consult
+    since notmuch will be in our path and we don't need special flags
+    for it, but just in case:
+
+    #+begin_src emacs-lisp
+      (defcustom consult-notmuch-command "notmuch search *ARG*"
+        "Command to perform notmuch search."
+        :type 'string)
+    #+end_src
+
+    Note that the ~*ARG*~ marker is important: it's where consult's
+    async command helpers are going to insert our query string.
+
+* Implementation
+  :PROPERTIES:
+  :header-args: :noweb-ref private-functions
+  :END:
+*** Consult search function
+    The core of our implementation should a call to ~consult--read~ with
+    a closure to obtain completion candidates based on a call to
+    =notmuch search= as an asynchronous process.  For that, we'll use
+    consult's helper ~consult--async-command.~ This function takes as
+    first argument a string representing the command to be called to
+    obtain completion candidates, followed by any transformations we
+    want to apply to them before being displayed.  Thus, our
+    candidates generator will look like:
+
+    #+begin_src emacs-lisp
+      (defun consult-notmuch--search (&optional initial)
+        "Perform an asynchronous notmuch search via `consult--read'.
+      If given, use INITIAL as the starting point of the query."
+        (consult--read (consult--async-command consult-notmuch-command
+                         (consult--async-map #'consult-notmuch--transformer))
+                       :prompt "Notmuch search: "
+                       :require-match t
+                       :initial (concat consult-async-default-split initial)
+                       :history 'consult-notmuch-history
+                       :state #'consult-notmuch--preview
+                       :category 'notmuch-result))
+    #+end_src
+
+    In the code above we're also using a preview function, [[*Parsing notmuch results][defined
+    below]], and a history variable:
+
+    #+begin_src emacs-lisp
+
+      (defvar consult-notmuch-history nil
+        "History for `consult-notmuch'.")
+
+    #+end_src
+
+*** Parsing notmuch results
+    Our candidates generator uses the following transformer to
+    pretty-print the raw results returned by the notmuch process:
+
+    #+begin_src emacs-lisp
+      (defun consult-notmuch--transformer (str)
+        "Transform STR to notmuch display style."
+        (when (string-match "thread:" str)
+          (let* ((thread-id (car (split-string str "\\ +")))
+                 (date (substring str 24 37))
+                 (mid (substring str 24))
+                 (c0 (string-match "[[]" mid))
+                 (c1 (string-match "[]]" mid))
+                 (count (substring mid c0 (1+ c1)))
+                 (authors (truncate-string-to-width
+                           (string-trim (nth 1 (split-string mid "[];]"))) 20))
+                 (subject (truncate-string-to-width
+                           (string-trim (nth 1 (split-string mid "[;]")))
+                           (- (frame-width) 32))))
+            (format "%s %s\t%10s\t%20s\t%s"
+                    (propertize thread-id 'invisible t)
+                    (propertize date 'face 'consult-notmuch-date-face)
+                    (propertize count 'face 'consult-notmuch-count-face)
+                    (propertize authors 'face 'consult-notmuch-authors-face)
+                    (propertize subject 'face 'consult-notmuch-subject-face)))))
+    #+end_src
+
+    We use our [[*Faces][customizable faces]], extract a number of substrings and
+    play a little trick: to display our candidate, ~notmuch.el~ will
+    need the thread identifier, but we don't want to show it in our
+    nicely formatter minibuffer entry.  We simply prepend it to the
+    candidate string, but set its text property ~invisible~ to true.
+
+*** Displaying candidates
+
+    ~consult-notmuch--search~ is going to return a candidate, and we'll
+    want to display it either as a single message or a
+    tree. ~notmuch.el~ already provides functions for that, so our
+    display functions are really simple.  Let's start with the one
+    showing previews.
+
+***** Previews
+
+      We're going to use always the same buffer for previews, and
+      close it when we're done:
+
+      #+begin_src emacs-lisp
+
+        (defvar consult-notmuch--buffer-name "*consult-notmuch-show*"
+          "Name of preview and result buffers.")
+
+        (defun consult-notmuch--close-preview ()
+          "Name says it all (and checkdoc is a bit silly, insisting on this)."
+          (when (get-buffer consult-notmuch--buffer-name)
+            (kill-buffer consult-notmuch--buffer-name)))
+
+      #+end_src
+
+      and use ~notmuch-show~ to show a candidate. Remember that we've
+      stashed the thread id needed by that function at the beginning
+      of our candidate string, so it's really easy to extract and use
+      it:
+
+      #+begin_src emacs-lisp
+
+        (defun consult-notmuch--preview (thread _restore)
+          "Open resulting THREAD in ‘notmuch-show’ view, in a preview buffer."
+          (consult-notmuch--close-preview)
+          (let ((thread-id (car (split-string thread "\\ +"))))
+            (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
+
+      #+end_src
+
+      The additional ~_restore~ argument it's used by ~consult~ when we
+      install the function above via ~consult--read~'s =:state= keyword.
+
+***** Messages and trees
+
+      Displaying a message is practically identical to previewing it,
+      we just change the buffer's name to include the query:
+
+      #+begin_src emacs-lisp
+
+        (defun consult-notmuch--show (thread)
+          "Open resulting THREAD in ‘notmuch-show’ view."
+          (consult-notmuch--close-preview)
+          (let ((title (concat consult-notmuch--buffer-name (substring thread 24)))
+                (thread-id (car (split-string thread "\\ +"))))
+            (notmuch-show thread-id nil nil nil title)))
+
+      #+end_src
+
+      and for a tree we just use ~notmuch-tree~ instead:
+
+      #+begin_src emacs-lisp
+
+        (defun consult-notmuch--tree (thread)
+          "Open resulting THREAD in ‘notmuch-tree’."
+          (consult-notmuch--close-preview)
+          (let ((thread-id (car (split-string thread "\\ +"))))
+            (notmuch-tree thread-id nil nil)))
+
+      #+end_src
+
+* Package boilerplate
+*** ELPA headers
+    The standard header boilerplate will make it publishable as a
+    regular ELPA package
+    #+begin_src emacs-lisp :noweb-ref package-boilerplate
+      ;; Author: Jose A Ortega Ruiz <jao@gnu.org>
+      ;; Maintainer: Jose A Ortega Ruiz
+      ;; Keywords: mail
+      ;; License: GPL-3.0-or-later
+      ;; Version: 0.1
+      ;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
+      ;; Homepage: https://codeberg.org/jao/consult-notmuch
+
+      #+end_src
+
+*** License (GPL 3+)
+
+    #+begin_src emacs-lisp :noweb-ref package-boilerplate
+
+      ;; Copyright (C) 2021  Jose A Ortega Ruiz
+
+      ;; This program is free software; you can redistribute it and/or modify
+      ;; it under the terms of the GNU General Public License as published by
+      ;; the Free Software Foundation, either version 3 of the License, or
+      ;; (at your option) any later version.
+
+      ;; This program is distributed in the hope that it will be useful,
+      ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+      ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+      ;; GNU General Public License for more details.
+
+      ;; You should have received a copy of the GNU General Public License
+      ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    #+end_src
+
+*** Commentary blurb
+
+    #+begin_src emacs-lisp :noweb-ref package-boilerplate
+      ;;; Commentary:
+
+      ;; This package provides two commands using consult to query notmuch
+      ;; emails and present results either as single emails
+      ;; (`consult-notmuch') or full trees (`consult-notmuch-tree').
+
+      ;; This elisp file is automatically generated from its literate
+      ;; counterpart at
+      ;; https://codeberg.org/jao/consult-notmuch/src/branch/main/readme.org
+    #+end_src
+
+* Acknowledgements
+
+  This implementation was heavily inspired by [[https://github.com/fuxialexander/counsel-notmuch/][Alexander Fu Xi's
+  counsel-notmuch]].
