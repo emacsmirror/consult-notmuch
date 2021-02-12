@@ -4,8 +4,9 @@
 #+auto_tangle: t
 
 This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  The
-file ~consult-notmuch.el~ is automatically generated from this org
-document, and has the typical sectioning of an emacs package:
+file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org
+document, and has the typical breakdown in sections of an emacs
+package:
 
 #+begin_src emacs-lisp :tangle consult-notmuch.el
 ;;; consult-notmuch.el --- Notmuch search using consult  -*- lexical-binding: t; -*-
