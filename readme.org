@@ -1,5 +1,5 @@
 #+title:  consult-notmuch
-#+description:
+#+description: notmuch queries with completing read provided by consult
 #+property: header-args :noweb tangle
 #+auto_tangle: t
 
