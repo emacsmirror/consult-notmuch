@@ -4,7 +4,7 @@
 #+auto_tangle: t
 
 This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  It
-provides interactive function to launch search processes using the
+offers interactive functions to launch search processes using the
 notmuch executable and present their results in a completion
 minibuffer and, after selection of a candidate, single message and
 tree views.
@@ -53,6 +53,14 @@ The package's elisp code is tangled from this literate program (see
   They're implemented in terms of a common search driver, with the
   only difference being how we show the final result of the
   auto-completion call.
+
+  When using them you'll notice how we automatically inject consult's
+  split character (~#~ by default) so that our search term can be
+  divided into a string passed to notmuch and a second half (after
+  inserting a second ~#~ in our query) that is used by to emacs to
+  filter the results of the former.  You'll also see that there's a
+  preview available when traversing the list of candidates in the
+  minibuffer.
 
 * Customization
   :PROPERTIES:
