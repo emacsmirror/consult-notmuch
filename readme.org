@@ -55,12 +55,12 @@ The package's elisp code is tangled from this literate program (see
   auto-completion call.
 
   When using them you'll notice how we automatically inject consult's
-  split character (~#~ by default) so that our search term can be
-  divided into a string passed to notmuch and a second half (after
-  inserting a second ~#~ in our query) that is used by to emacs to
-  filter the results of the former.  You'll also see that there's a
-  preview available when traversing the list of candidates in the
-  minibuffer.
+  split character (~#~ by default) as the first one in the query string,
+  so that our search term can be divided into a string passed to
+  notmuch and a second half (after inserting a second ~#~ in our query)
+  that is used by emacs to filter the results of the former.  You'll
+  also see that there's a preview available when traversing the list
+  of candidates in the minibuffer.
 
 * Customization
   :PROPERTIES:
