@@ -10,9 +10,6 @@
 ;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
-;; This implementation is very heavily inspired by Alexander Fu Xi's
-;; for counsel: https://github.com/fuxialexander/counsel-notmuch/
-
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
@@ -36,7 +33,6 @@
 
 (require 'consult)
 (require 'notmuch)
-(require 's)
 
 (defgroup consult-notmuch nil
   "Options for consult-notmuch."
@@ -70,16 +66,32 @@
 (defvar consult-notmuch-history nil
   "History for `consult-notmuch'.")
 
-(defun consult-notmuch--tree (thread &optional initial-input)
+(defvar consult-notmuch--buffer-name "*consult-notmuch-show*"
+  "Name of preview and result buffers.")
+
+(defun consult-notmuch--close-preview ()
+  "Name says it all (and checkdoc is a bit silly)."
+  (when (get-buffer consult-notmuch--buffer-name)
+    (kill-buffer consult-notmuch--buffer-name)))
+
+(defun consult-notmuch--tree (thread)
   "Open resulting THREAD in ‘notmuch-tree’ view with INITIAL-INPUT."
+  (consult-notmuch--close-preview)
   (let ((thread-id (car (split-string thread "\\ +"))))
     (notmuch-tree thread-id initial-input nil)))
 
 (defun consult-notmuch--show (thread)
   "Open resulting THREAD in ‘notmuch-show’ view."
-  (let ((title (concat "*consult-notmuch-show*" (substring thread 24)))
+  (consult-notmuch--close-preview)
+  (let ((title (concat consult-notmuch--buffer-name (substring thread 24)))
         (thread-id (car (split-string thread "\\ +"))))
     (notmuch-show thread-id nil nil nil title)))
+
+(defun consult-notmuch--preview (thread _restore)
+  "Open resulting THREAD in ‘notmuch-show’ view, in a preview buffer."
+  (consult-notmuch--close-preview)
+  (let ((thread-id (car (split-string thread "\\ +"))))
+    (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
 
 (defun consult-notmuch--transformer (str)
   "Transform STR to notmuch display style."
@@ -102,27 +114,31 @@
               (propertize people 'face 'consult-notmuch-people-face)
               (propertize subject 'face 'consult-notmuch-subject-face)))))
 
-(defun consult-notmuch--search ()
-  "Perform an asynchronous notmuch search via `consult--read'."
+(defun consult-notmuch--search (&optional initial)
+  "Perform an asynchronous notmuch search via `consult--read'.
+If given, use INITIAL as the starting point of the query."
   (consult--read (consult--async-command consult-notmuch-command
                    (consult--async-map #'consult-notmuch--transformer))
                  :prompt "Notmuch search: "
                  :require-match t
-                 :initial consult-async-default-split
+                 :initial (concat consult-async-default-split initial)
                  :history 'consult-notmuch-history
+                 :state #'consult-notmuch--preview
                  :category 'notmuch-result))
 
 ;;;###autoload
-(defun consult-notmuch ()
-  "Search for your email in notmuch, showing single messages."
+(defun consult-notmuch (&optional initial)
+  "Search for your email in notmuch, showing single messages.
+If given, use INITIAL as the starting point of the query."
   (interactive)
-  (consult-notmuch--show (consult-notmuch--search)))
+  (consult-notmuch--show (consult-notmuch--search initial)))
 
 ;;;###autoload
-(defun consult-notmuch-tree ()
-  "Search for your email in notmuch, showing full candidate tree."
+(defun consult-notmuch-tree (&optional initial)
+  "Search for your email in notmuch, showing full candidate tree.
+If given, use INITIAL as the starting point of the query."
   (interactive)
-  (consult-notmuch--tree (consult-notmuch--search)))
+  (consult-notmuch--tree (consult-notmuch--search initial)))
 
 (provide 'consult-notmuch)
 ;;; consult-notmuch.el ends here
