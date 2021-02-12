@@ -2,7 +2,7 @@
 
 [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].
 
-Use it via any of the following commands:
+Use it via any of the following auto-loaded commands:
 
   - ~consult-notmuch~
   - ~consult-notmuch-tree~
