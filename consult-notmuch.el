@@ -108,6 +108,7 @@
                    (consult--async-map #'consult-notmuch--transformer))
                  :prompt "Notmuch search: "
                  :require-match t
+                 :initial consult-async-default-split
                  :history 'consult-notmuch-history
                  :category 'notmuch-result))
 
