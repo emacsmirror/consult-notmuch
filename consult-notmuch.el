@@ -1,4 +1,4 @@
-;;; consult-notmuch.el --- notmuch search using consult  -*- lexical-binding: t; -*-
+;;; consult-notmuch.el --- Notmuch search using consult  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2021  jao
 
@@ -8,6 +8,7 @@
 ;; License: GPL-3.0-or-later
 ;; Version: 0.1
 ;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
+;; Homepage: https://codeberg.org/jao/consult-notmuch
 
 ;; This implementation is very heavily inspired by Alexander Fu Xi's
 ;; for counsel: https://github.com/fuxialexander/counsel-notmuch/
