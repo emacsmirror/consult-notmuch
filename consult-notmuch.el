@@ -42,7 +42,7 @@
   :group 'Notmuch)
 
 (defcustom consult-notmuch-command "notmuch search *ARG*"
-  "Command to perform notmuch search"
+  "Command to perform notmuch search."
   :type 'string
   :group 'consult-notmuch)
 
@@ -102,7 +102,7 @@
               (propertize subject 'face 'consult-notmuch-subject-face)))))
 
 (defun consult-notmuch--search ()
-  "Perform an asynchronous notmuch search via consult--read"
+  "Perform an asynchronous notmuch search via `consult--read'."
   (consult--read (consult--async-command consult-notmuch-command
                    (consult--async-map #'consult-notmuch--transformer))
                  :prompt "Notmuch search: "
