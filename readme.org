@@ -3,9 +3,14 @@
 #+property: header-args :noweb tangle
 #+auto_tangle: t
 
-This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  It's
-code is tangled from this document (see [[*consult-notmuch.el][this section]] for its
-template).
+This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  It
+provides interactive function to launch search processes using the
+notmuch executable and present their results in a completion
+minibuffer and, after selection of a candidate, single message and
+tree views.
+
+The package's elisp code is tangled from this literate program (see
+[[*consult-notmuch.el][this section]] for its template).
 
 * Dependencies and installation
   We depend on the emacs packages [[https://github.com/minad/consult][consult]] and [[https://notmuchmail.org/][notmuch]]:
