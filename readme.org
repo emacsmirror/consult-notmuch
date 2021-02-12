@@ -1,0 +1,3 @@
+#+title  consult-notmuch
+
+[[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].
