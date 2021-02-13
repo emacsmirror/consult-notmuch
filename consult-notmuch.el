@@ -44,19 +44,19 @@
   :group 'Notmuch)
 
 (defface consult-notmuch-date-face
-  '((t :inherit notmuch-search-date :background nil))
+  '((t :inherit notmuch-search-date))
   "Face used in matching messages for the date field.")
 
 (defface consult-notmuch-count-face
-  '((t :inherit notmuch-search-count :background nil))
+  '((t :inherit notmuch-search-count))
   "Face used in matching messages for the mail count field.")
 
 (defface consult-notmuch-authors-face
-  '((t :inherit notmuch-search-matching-authors :background nil))
+  '((t :inherit notmuch-search-matching-authors))
   "Face used in matching messages for the authors field.")
 
 (defface consult-notmuch-subject-face
-  '((t :inherit notmuch-search-subject :background nil))
+  '((t :inherit notmuch-search-subject))
   "Face used in matching messages for the subject field.")
 (defcustom consult-notmuch-command "notmuch search *ARG*"
   "Command to perform notmuch search."
