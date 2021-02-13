@@ -41,7 +41,7 @@
 
 (defgroup consult-notmuch nil
   "Options for consult-notmuch."
-  :group 'Notmuch)
+  :group 'notmuch)
 
 (defface consult-notmuch-date-face
   '((t :inherit notmuch-search-date))
@@ -86,8 +86,8 @@ If given, use INITIAL as the starting point of the query."
            (c0 (string-match "[[]" mid))
            (c1 (string-match "[]]" mid))
            (count (substring mid c0 (1+ c1)))
-           (authors (truncate-string-to-width
-                     (string-trim (nth 1 (split-string mid "[];]"))) 20))
+           (auths (truncate-string-to-width
+                   (string-trim (nth 1 (split-string mid "[];]"))) 20))
            (subject (truncate-string-to-width
                      (string-trim (nth 1 (split-string mid "[;]")))
                      (- (frame-width) 32))))
@@ -95,7 +95,7 @@ If given, use INITIAL as the starting point of the query."
               (propertize thread-id 'invisible t)
               (propertize date 'face 'consult-notmuch-date-face)
               (propertize count 'face 'consult-notmuch-count-face)
-              (propertize authors 'face 'consult-notmuch-authors-face)
+              (propertize auths 'face 'consult-notmuch-authors-face)
               (propertize subject 'face 'consult-notmuch-subject-face)))))
 
 (defvar consult-notmuch--buffer-name "*consult-notmuch-show*"
