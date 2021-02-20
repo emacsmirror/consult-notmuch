@@ -167,11 +167,17 @@ The package's elisp code is tangled from this literate program (see
                  (c1 (string-match "[]]" mid))
                  (count (substring mid c0 (1+ c1)))
                  (auths (truncate-string-to-width
-                         (string-trim (nth 1 (split-string mid "[];]"))) 20))
+                         (string-trim (nth 1 (split-string mid "[];]")))
+                         consult-notmuch-authors-width))
                  (subject (truncate-string-to-width
                            (string-trim (nth 1 (split-string mid "[;]")))
-                           (- (frame-width) 32))))
-            (format "%s %s\t%10s\t%20s\t%s"
+                           (- (frame-width)
+                              2
+                              consult-notmuch-counts-width
+                              consult-notmuch-authors-width))))
+            (format (format "%%s %%s\t%%%ds\t%%%ds\t%%s"
+                            consult-notmuch-counts-width
+                            consult-notmuch-authors-width)
                     (propertize thread-id 'invisible t)
                     (propertize date 'face 'consult-notmuch-date-face)
                     (propertize count 'face 'consult-notmuch-count-face)
@@ -184,6 +190,21 @@ The package's elisp code is tangled from this literate program (see
     need the thread identifier, but we don't want to show it in our
     nicely formatter minibuffer entry.  We simply prepend it to the
     candidate string, but set its text property ~invisible~ to true.
+
+    We have also made the width of the authors and counts fields
+    customizable variables:
+
+    #+begin_src emacs-lisp :noweb-ref customization
+
+      (defcustom consult-notmuch-authors-width 20
+        "Maximum width of the authors column in search results."
+        :type 'integer)
+
+      (defcustom consult-notmuch-counts-width 10
+        "Minimum width of the counts column in search results."
+        :type 'integer)
+
+    #+end_src
 
 *** Displaying candidates
 

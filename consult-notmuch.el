@@ -62,6 +62,15 @@
   "Command to perform notmuch search."
   :type 'string)
 
+(defcustom consult-notmuch-authors-width 20
+  "Maximum width of the authors column in search results."
+  :type 'integer)
+
+(defcustom consult-notmuch-counts-width 10
+  "Minimum width of the counts column in search results."
+  :type 'integer)
+
+
 (defun consult-notmuch--search (&optional initial)
   "Perform an asynchronous notmuch search via `consult--read'.
 If given, use INITIAL as the starting point of the query."
@@ -87,11 +96,17 @@ If given, use INITIAL as the starting point of the query."
            (c1 (string-match "[]]" mid))
            (count (substring mid c0 (1+ c1)))
            (auths (truncate-string-to-width
-                   (string-trim (nth 1 (split-string mid "[];]"))) 20))
+                   (string-trim (nth 1 (split-string mid "[];]")))
+                   consult-notmuch-authors-width))
            (subject (truncate-string-to-width
                      (string-trim (nth 1 (split-string mid "[;]")))
-                     (- (frame-width) 32))))
-      (format "%s %s\t%10s\t%20s\t%s"
+                     (- (frame-width)
+                        2
+                        consult-notmuch-counts-width
+                        consult-notmuch-authors-width))))
+      (format (format "%%s %%s\t%%%ds\t%%%ds\t%%s"
+                      consult-notmuch-counts-width
+                      consult-notmuch-authors-width)
               (propertize thread-id 'invisible t)
               (propertize date 'face 'consult-notmuch-date-face)
               (propertize count 'face 'consult-notmuch-count-face)
