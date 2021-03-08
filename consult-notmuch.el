@@ -4,7 +4,7 @@
 ;; Maintainer: Jose A Ortega Ruiz
 ;; Keywords: mail
 ;; License: GPL-3.0-or-later
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
@@ -81,7 +81,9 @@ If given, use INITIAL as the starting point of the query."
                  :initial (concat consult-async-default-split initial)
                  :history 'consult-notmuch-history
                  :state #'consult-notmuch--preview
-                 :category 'notmuch-result))
+                 :lookup #'consult-notmuch--lookup
+                 :category 'notmuch-result
+                 :sort nil))
 
 (defvar consult-notmuch-history nil
   "History for `consult-notmuch'.")
@@ -103,17 +105,28 @@ If given, use INITIAL as the starting point of the query."
                      (- (frame-width)
                         2
                         consult-notmuch-counts-width
-                        consult-notmuch-authors-width))))
-      (format (format "%%s %%s\t%%%ds\t%%%ds\t%%s"
-                      consult-notmuch-counts-width
-                      consult-notmuch-authors-width)
-              (propertize thread-id 'invisible t)
-              (propertize date 'face 'consult-notmuch-date-face)
-              (propertize count 'face 'consult-notmuch-count-face)
-              (propertize auths 'face 'consult-notmuch-authors-face)
-              (propertize subject 'face 'consult-notmuch-subject-face)))))
+                        consult-notmuch-authors-width)))
+           (fmt (format "%%s\t%%%ds\t%%%ds\t%%s"
+                        consult-notmuch-counts-width
+                        consult-notmuch-authors-width)))
+      (propertize
+       (format fmt
+               (propertize date 'face 'consult-notmuch-date-face)
+               (propertize count 'face 'consult-notmuch-count-face)
+               (propertize auths 'face 'consult-notmuch-authors-face)
+               (propertize subject 'face 'consult-notmuch-subject-face))
+       'thread-id thread-id))))
 
-(defvar consult-notmuch--buffer-name "*consult-notmuch-show*"
+(defun consult-notmuch--thread-id (candidate)
+  "Recover the thread id for the given CANDIDATE string."
+  (get-text-property 0 'thread-id candidate))
+
+(defun consult-notmuch--lookup (_ cands cand)
+  "Find CAND in CANDS."
+  (seq-find (lambda (x) (string= cand x)) cands))
+
+
+(defvar consult-notmuch--buffer-name "*consult-notmuch*"
   "Name of preview and result buffers.")
 
 (defun consult-notmuch--close-preview ()
@@ -122,25 +135,26 @@ If given, use INITIAL as the starting point of the query."
     (kill-buffer consult-notmuch--buffer-name)))
 
 
-(defun consult-notmuch--preview (thread _restore)
-  "Open resulting THREAD in ‘notmuch-show’ view, in a preview buffer."
+(defun consult-notmuch--preview (candidate _restore)
+  "Open resulting CANDIDATE in ‘notmuch-show’ view, in a preview buffer."
   (consult-notmuch--close-preview)
-  (let ((thread-id (car (split-string thread "\\ +"))))
+  (let ((thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
 
 
-(defun consult-notmuch--show (thread)
-  "Open resulting THREAD in ‘notmuch-show’ view."
+(defun consult-notmuch--show (candidate)
+  "Open resulting CANDIDATE in ‘notmuch-show’ view."
   (consult-notmuch--close-preview)
-  (let ((title (concat consult-notmuch--buffer-name (substring thread 24)))
-        (thread-id (car (split-string thread "\\ +"))))
+  (let* ((subject (car (last (split-string candidate "\t"))))
+         (title (concat consult-notmuch--buffer-name " " subject))
+         (thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-show thread-id nil nil nil title)))
 
 
-(defun consult-notmuch--tree (thread)
-  "Open resulting THREAD in ‘notmuch-tree’."
+(defun consult-notmuch--tree (candidate)
+  "Open resulting CANDIDATE in ‘notmuch-tree’."
   (consult-notmuch--close-preview)
-  (let ((thread-id (car (split-string thread "\\ +"))))
+  (let ((thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-tree thread-id nil nil)))
 
 
