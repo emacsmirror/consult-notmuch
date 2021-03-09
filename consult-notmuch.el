@@ -119,7 +119,7 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--thread-id (candidate)
   "Recover the thread id for the given CANDIDATE string."
-  (get-text-property 0 'thread-id candidate))
+  (when candidate (get-text-property 0 'thread-id candidate)))
 
 (defun consult-notmuch--lookup (_ cands cand)
   "Find CAND in CANDS."
@@ -138,23 +138,23 @@ If given, use INITIAL as the starting point of the query."
 (defun consult-notmuch--preview (candidate _restore)
   "Open resulting CANDIDATE in ‘notmuch-show’ view, in a preview buffer."
   (consult-notmuch--close-preview)
-  (let ((thread-id (consult-notmuch--thread-id candidate)))
+  (when-let ((thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
 
 
 (defun consult-notmuch--show (candidate)
   "Open resulting CANDIDATE in ‘notmuch-show’ view."
   (consult-notmuch--close-preview)
-  (let* ((subject (car (last (split-string candidate "\t"))))
-         (title (concat consult-notmuch--buffer-name " " subject))
-         (thread-id (consult-notmuch--thread-id candidate)))
-    (notmuch-show thread-id nil nil nil title)))
+  (when-let ((thread-id (consult-notmuch--thread-id candidate)))
+    (let* ((subject (car (last (split-string candidate "\t"))))
+           (title (concat consult-notmuch--buffer-name " " subject)))
+      (notmuch-show thread-id nil nil nil title))))
 
 
 (defun consult-notmuch--tree (candidate)
   "Open resulting CANDIDATE in ‘notmuch-tree’."
   (consult-notmuch--close-preview)
-  (let ((thread-id (consult-notmuch--thread-id candidate)))
+  (when-let ((thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-tree thread-id nil nil)))
 
 
