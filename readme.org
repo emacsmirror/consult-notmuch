@@ -62,6 +62,40 @@ The package's elisp code is tangled from this literate program (see
   also see that there's a preview available when traversing the list
   of candidates in the minibuffer.
 
+  It is also worth remembering that the input is a generic notmuch
+  query, so one can, for instance, use the ~initial~ contents to define
+  specific query commands.  For example, i have a set of mailboxes
+  under a subdirectory called ~feeds~ (where mails retrieved by
+  rss2email end up after a dovecot sieve), so i could define this
+  command in my init files:
+
+  #+begin_src emacs-lisp :noweb-ref no :tangle no
+    (defun jao-consult-notmuch-feeds (&optional tree)
+      (interactive "P")
+      (let ((init "folder:/feeds/ "))
+        (if tree (consult-notmuch-tree init) (consult-notmuch init))))
+  #+end_src
+
+  or be more generic and read from a completing prompt the subfolder
+  of my =~/var/mail= directory i want to use:
+
+  #+begin_src emacs-lisp :noweb-ref no :tangle no
+    (defun jao-consult-notmuch-folder (&optional tree folder)
+      (interactive "P")
+      (let* ((root "~/var/mail/")
+             (folder (if folder
+                         (file-name-as-directory folder)
+                         (thread-first (read-directory-name "Mailbox: " root)
+                           (file-relative-name root))))
+             (folder (replace-regexp-in-string "/\\(.\\)" "\\\\/\\1" folder))
+             (init (format "folder:/%s " folder)))
+        (if tree (consult-notmuch-tree init) (consult-notmuch init))))
+
+    (defun jao-consult-notmuch-feeds (&optional tree)
+      (interactive "P")
+      (jao-consult-folder tree "feeds"))
+  #+end_src
+
 * Customization
   :PROPERTIES:
   :header-args: :noweb-ref customization
