@@ -1,6 +1,6 @@
 #+title:  notmuch queries via consult
 #+date: <2021-03-11 00:00>
-#+filetags: emacs pages
+#+filetags: emacs pages norss
 #+description: notmuch queries with completing read provided by consult
 #+property: header-args :noweb tangle
 #+auto_tangle: t
