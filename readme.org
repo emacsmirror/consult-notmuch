@@ -1,4 +1,6 @@
-#+title:  consult-notmuch
+#+title:  notmuch queries via consult
+#+date: <2021-03-11 00:00>
+#+filetags: emacs pages
 #+description: notmuch queries with completing read provided by consult
 #+property: header-args :noweb tangle
 #+auto_tangle: t
@@ -9,8 +11,7 @@ notmuch executable and present their results in a completion
 minibuffer and, after selection of a candidate, single message and
 tree views.
 
-The package's elisp code is tangled from this literate program (see
-[[*consult-notmuch.el][this section]] for its template).
+The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notmuch/src/branch/main/readme.org][this literate program]].
 
 * Dependencies and installation
   We depend on the emacs packages [[https://github.com/minad/consult][consult]] and [[https://notmuchmail.org/][notmuch]]:
@@ -22,7 +23,7 @@ The package's elisp code is tangled from this literate program (see
 
   Both, as well as this package, are available in MELPA, so that's the
   easiest way to install consult-notmuch.  You can also simply tangle
-  this document and put the resulting ~consult-notmuch.el~ file in your
+  [[https://codeberg.org/jao/consult-notmuch/src/branch/main/readme.org][this document]] and put the resulting ~consult-notmuch.el~ file in your
   load path (provided you have its dependencies in your load path
   too), or obtain it from [[https://codeberg.org/jao/consult-notmuch][its git repository]].
 
@@ -335,7 +336,7 @@ The package's elisp code is tangled from this literate program (see
 
       #+end_src
 
-* Package boilerplate
+* Package boilerplate                                            :noexport:
 *** consult-notmuch.el
       The file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org
       document, and has the typical breakdown in sections of an emacs
