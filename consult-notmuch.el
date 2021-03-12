@@ -58,7 +58,8 @@
 (defface consult-notmuch-subject-face
   '((t :inherit notmuch-search-subject))
   "Face used in matching messages for the subject field.")
-(defcustom consult-notmuch-command "notmuch search *ARG*"
+
+(defcustom consult-notmuch-command "notmuch search ARG"
   "Command to perform notmuch search."
   :type 'string)
 

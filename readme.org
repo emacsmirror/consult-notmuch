@@ -133,6 +133,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       (defface consult-notmuch-subject-face
         '((t :inherit notmuch-search-subject))
         "Face used in matching messages for the subject field.")
+
     #+end_src
 
 *** Notmuch command
@@ -141,7 +142,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
     for it, but just in case:
 
     #+begin_src emacs-lisp
-      (defcustom consult-notmuch-command "notmuch search *ARG*"
+      (defcustom consult-notmuch-command "notmuch search ARG"
         "Command to perform notmuch search."
         :type 'string)
     #+end_src
