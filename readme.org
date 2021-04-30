@@ -337,6 +337,42 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
       #+end_src
 
+*** Buffer narrowing
+
+    If you have many buffers, you may want a convenient way to switch
+    specifically among notmuch buffers.  The ~consult--source-notmuch-buffer~
+    source can be used for this purpose:
+
+    #+begin_src emacs-lisp
+
+      (defvar consult--source-notmuch-buffer
+        `(:name      "Notmuch Buffer"
+          :narrow    (?n . "Notmuch")
+          :hidden    t
+          :category  buffer
+          :face      consult-buffer
+          :history   buffer-name-history
+          :state     ,#'consult--buffer-state
+          :items
+          ,(lambda ()
+             (mapcar #'buffer-name
+                     (seq-filter #'notmuch-interesting-buffer
+                                 (consult--cached-buffers)))))
+        "Notmuch buffer candidate source for `consult-buffer'.")
+
+    #+end_src
+
+    This source can be used with ~consult-buffer~ by adding it to
+    ~consult-buffer-sources~:
+
+    #+begin_src emacs-lisp :noweb-ref no :tangle no
+      (cl-pushnew 'consult--source-notmuch-buffer consult-buffer-sources)
+    #+end_src
+
+    With the above configuration, you can initiate ~consult-buffer~ and then
+    type ~n~ followed by a space to narrow the set of buffers to just notmuch
+    buffers.
+
 * Package boilerplate                                            :noexport:
 *** consult-notmuch.el
       The file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org

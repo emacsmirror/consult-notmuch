@@ -159,6 +159,22 @@ If given, use INITIAL as the starting point of the query."
     (notmuch-tree thread-id nil nil)))
 
 
+(defvar consult--source-notmuch-buffer
+  `(:name      "Notmuch Buffer"
+    :narrow    (?n . "Notmuch")
+    :hidden    t
+    :category  buffer
+    :face      consult-buffer
+    :history   buffer-name-history
+    :state     ,#'consult--buffer-state
+    :items
+    ,(lambda ()
+       (mapcar #'buffer-name
+               (seq-filter #'notmuch-interesting-buffer
+                           (consult--cached-buffers)))))
+  "Notmuch buffer candidate source for `consult-buffer'.")
+
+
 ;;;###autoload
 (defun consult-notmuch (&optional initial)
   "Search for your email in notmuch, showing single messages.
