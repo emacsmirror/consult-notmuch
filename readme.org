@@ -28,75 +28,114 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
   too), or obtain it from [[https://codeberg.org/jao/consult-notmuch][its git repository]].
 
 * Usage
+*** Consult interface to notmuch search
 
-  Our objective is to use consult to perform notmuch queries, and show
-  their results in the completions minibuffer and, upon selection, on
-  a dedicated notmuch buffer.  Notmuch knows how to show either single
-  messages or full threads (or trees), so our public interface is
-  going to consist of two autoloaded commands:
+    Our objective is to use consult to perform notmuch queries, and show
+    their results in the completions minibuffer and, upon selection, on
+    a dedicated notmuch buffer.  Notmuch knows how to show either single
+    messages or full threads (or trees), so our public interface is
+    going to consist of two autoloaded commands:
 
-  #+begin_src emacs-lisp :noweb-ref public-functions
-    ;;;###autoload
-    (defun consult-notmuch (&optional initial)
-      "Search for your email in notmuch, showing single messages.
-    If given, use INITIAL as the starting point of the query."
-      (interactive)
-      (consult-notmuch--show (consult-notmuch--search initial)))
+    #+begin_src emacs-lisp :noweb-ref public-functions
+      ;;;###autoload
+      (defun consult-notmuch (&optional initial)
+        "Search for your email in notmuch, showing single messages.
+      If given, use INITIAL as the starting point of the query."
+        (interactive)
+        (consult-notmuch--show (consult-notmuch--search initial)))
 
-    ;;;###autoload
-    (defun consult-notmuch-tree (&optional initial)
-      "Search for your email in notmuch, showing full candidate tree.
-    If given, use INITIAL as the starting point of the query."
-      (interactive)
-      (consult-notmuch--tree (consult-notmuch--search initial)))
-  #+end_src
+      ;;;###autoload
+      (defun consult-notmuch-tree (&optional initial)
+        "Search for your email in notmuch, showing full candidate tree.
+      If given, use INITIAL as the starting point of the query."
+        (interactive)
+        (consult-notmuch--tree (consult-notmuch--search initial)))
+    #+end_src
 
-  They're implemented in terms of a common search driver, with the
-  only difference being how we show the final result of the
-  auto-completion call.
+    They're implemented in terms of a common search driver, with the
+    only difference being how we show the final result of the
+    auto-completion call.
 
-  When using them you'll notice how we automatically inject consult's
-  split character (~#~ by default) as the first one in the query string,
-  so that our search term can be divided into a string passed to
-  notmuch and a second half (after inserting a second ~#~ in our query)
-  that is used by emacs to filter the results of the former.  You'll
-  also see that there's a preview available when traversing the list
-  of candidates in the minibuffer.
+    When using them you'll notice how we automatically inject consult's
+    split character (~#~ by default) as the first one in the query string,
+    so that our search term can be divided into a string passed to
+    notmuch and a second half (after inserting a second ~#~ in our query)
+    that is used by emacs to filter the results of the former.  You'll
+    also see that there's a preview available when traversing the list
+    of candidates in the minibuffer.
 
-  It is also worth remembering that the input is a generic notmuch
-  query, so one can, for instance, use the ~initial~ contents to define
-  specific query commands.  For example, i have a set of mailboxes
-  under a subdirectory called ~feeds~ (where mails retrieved by
-  rss2email end up after a dovecot sieve), so i could define this
-  command in my init files:
+    It is also worth remembering that the input is a generic notmuch
+    query, so one can, for instance, use the ~initial~ contents to define
+    specific query commands.  For example, i have a set of mailboxes
+    under a subdirectory called ~feeds~ (where mails retrieved by
+    rss2email end up after a dovecot sieve), so i could define this
+    command in my init files:
 
-  #+begin_src emacs-lisp :noweb-ref no :tangle no
-    (defun jao-consult-notmuch-feeds (&optional tree)
-      (interactive "P")
-      (let ((init "folder:/feeds/ "))
-        (if tree (consult-notmuch-tree init) (consult-notmuch init))))
-  #+end_src
+    #+begin_src emacs-lisp :noweb-ref no :tangle no
+      (defun jao-consult-notmuch-feeds (&optional tree)
+        (interactive "P")
+        (let ((init "folder:/feeds/ "))
+          (if tree (consult-notmuch-tree init) (consult-notmuch init))))
+    #+end_src
 
-  or be more generic and read from a completing prompt the subfolder
-  of my =~/var/mail= directory i want to use:
+    or be more generic and read from a completing prompt the subfolder
+    of my =~/var/mail= directory i want to use:
 
-  #+begin_src emacs-lisp :noweb-ref no :tangle no
-    (defun jao-consult-notmuch-folder (&optional tree folder)
-      (interactive "P")
-      (let* ((root "~/var/mail/")
-             (folder (if folder
-                         (file-name-as-directory folder)
-                         (thread-first (read-directory-name "Mailbox: " root)
-                           (file-relative-name root))))
-             (folder (replace-regexp-in-string "/\\(.\\)" "\\\\/\\1" folder))
-             (init (format "folder:/%s " folder)))
-        (if tree (consult-notmuch-tree init) (consult-notmuch init))))
+    #+begin_src emacs-lisp :noweb-ref no :tangle no
 
-    (defun jao-consult-notmuch-feeds (&optional tree)
-      (interactive "P")
-      (jao-consult-folder tree "feeds"))
-  #+end_src
+      (defun jao-consult-notmuch-folder (&optional tree folder)
+        (interactive "P")
+        (let* ((root "~/var/mail/")
+               (folder (if folder
+                           (file-name-as-directory folder)
+                           (thread-first (read-directory-name "Mailbox: " root)
+                             (file-relative-name root))))
+               (folder (replace-regexp-in-string "/\\(.\\)" "\\\\/\\1" folder))
+               (init (format "folder:/%s " folder)))
+          (if tree (consult-notmuch-tree init) (consult-notmuch init))))
 
+      (defun jao-consult-notmuch-feeds (&optional tree)
+        (interactive "P")
+        (jao-consult-folder tree "feeds"))
+    #+end_src
+
+*** Buffer narrowing
+
+    If you have many buffers, you may want a convenient way to switch
+    specifically among notmuch buffers.  The ~consult-notmuch-buffer~-source
+    source can be used for this purpose:
+
+    #+begin_src emacs-lisp :noweb-ref public-functions
+
+      (defun consult-notmuch--interesting-buffers ()
+        "Returns a list of names of buffers with interesting notmuch data."
+        (seq-map #'buffer-name
+                 (seq-filter #'notmuch-interesting-buffer
+                             (consult--cached-buffers))))
+
+      ;;;###autoload
+      (defvar consult-notmuch-buffer-source
+        '(:name "Notmuch Buffer"
+          :narrow (?n . "Notmuch")
+          :hidden t
+          :category buffer
+          :face consult-buffer
+          :history buffer-name-history
+          :state consult--buffer-state
+          :items consult-notmuch--interesting-buffers)
+        "Notmuch buffer candidate source for `consult-buffer'.")
+    #+end_src
+
+    This source can be used with ~consult-buffer~ by adding it to
+    ~consult-buffer-sources~:
+
+    #+begin_src emacs-lisp :noweb-ref no :tangle no
+      (add-to-list 'consult-buffer-sources 'consult-notmuch-buffer-source)
+    #+end_src
+
+    With the above configuration, you can initiate ~consult-buffer~ and then
+    type ~n~ followed by a space to narrow the set of buffers to just notmuch
+    buffers.
 * Customization
   :PROPERTIES:
   :header-args: :noweb-ref customization
@@ -175,7 +214,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
                        :initial (concat consult-async-default-split initial)
                        :history 'consult-notmuch-history
                        :state #'consult-notmuch--preview
-                       :lookup #'consult-notmuch--lookup
+                       :lookup #'consult--lookup-member
                        :category 'notmuch-result
                        :sort nil))
     #+end_src
@@ -237,17 +276,6 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       (defun consult-notmuch--thread-id (candidate)
         "Recover the thread id for the given CANDIDATE string."
         (when candidate (get-text-property 0 'thread-id candidate)))
-
-    #+end_src
-
-    and we must not forget defining the lookup function used by
-    ~consult--read~ to find our candidate in the list of propertized
-    strings:
-
-    #+begin_src emacs-lisp
-      (defun consult-notmuch--lookup (_ cands cand)
-        "Find CAND in CANDS."
-        (seq-find (lambda (x) (string= cand x)) cands))
 
     #+end_src
 
@@ -337,42 +365,6 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
       #+end_src
 
-*** Buffer narrowing
-
-    If you have many buffers, you may want a convenient way to switch
-    specifically among notmuch buffers.  The ~consult--source-notmuch-buffer~
-    source can be used for this purpose:
-
-    #+begin_src emacs-lisp
-
-      (defvar consult--source-notmuch-buffer
-        `(:name      "Notmuch Buffer"
-          :narrow    (?n . "Notmuch")
-          :hidden    t
-          :category  buffer
-          :face      consult-buffer
-          :history   buffer-name-history
-          :state     ,#'consult--buffer-state
-          :items
-          ,(lambda ()
-             (mapcar #'buffer-name
-                     (seq-filter #'notmuch-interesting-buffer
-                                 (consult--cached-buffers)))))
-        "Notmuch buffer candidate source for `consult-buffer'.")
-
-    #+end_src
-
-    This source can be used with ~consult-buffer~ by adding it to
-    ~consult-buffer-sources~:
-
-    #+begin_src emacs-lisp :noweb-ref no :tangle no
-      (cl-pushnew 'consult--source-notmuch-buffer consult-buffer-sources)
-    #+end_src
-
-    With the above configuration, you can initiate ~consult-buffer~ and then
-    type ~n~ followed by a space to narrow the set of buffers to just notmuch
-    buffers.
-
 * Package boilerplate                                            :noexport:
 *** consult-notmuch.el
       The file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org
@@ -406,7 +398,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       ;; Maintainer: Jose A Ortega Ruiz
       ;; Keywords: mail
       ;; License: GPL-3.0-or-later
-      ;; Version: 0.2
+      ;; Version: 0.3
       ;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
       ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
@@ -441,6 +433,11 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       ;; This package provides two commands using consult to query notmuch
       ;; emails and present results either as single emails
       ;; (`consult-notmuch') or full trees (`consult-notmuch-tree').
+      ;;
+      ;; The package also defines a narrowing source for `consult-buffer',
+      ;; which can be activated with
+      ;;
+      ;;   (add-to-list 'consult-buffer-sources 'consult-notmuch-buffer-source)
 
       ;; This elisp file is automatically generated from its literate
       ;; counterpart at

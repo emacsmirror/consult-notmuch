@@ -4,7 +4,7 @@
 ;; Maintainer: Jose A Ortega Ruiz
 ;; Keywords: mail
 ;; License: GPL-3.0-or-later
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
@@ -29,6 +29,11 @@
 ;; This package provides two commands using consult to query notmuch
 ;; emails and present results either as single emails
 ;; (`consult-notmuch') or full trees (`consult-notmuch-tree').
+;;
+;; The package also defines a narrowing source for `consult-buffer',
+;; which can be activated with
+;;
+;;   (add-to-list 'consult-buffer-sources 'consult-notmuch-buffer-source)
 
 ;; This elisp file is automatically generated from its literate
 ;; counterpart at
@@ -82,7 +87,7 @@ If given, use INITIAL as the starting point of the query."
                  :initial (concat consult-async-default-split initial)
                  :history 'consult-notmuch-history
                  :state #'consult-notmuch--preview
-                 :lookup #'consult-notmuch--lookup
+                 :lookup #'consult--lookup-member
                  :category 'notmuch-result
                  :sort nil))
 
@@ -122,10 +127,6 @@ If given, use INITIAL as the starting point of the query."
   "Recover the thread id for the given CANDIDATE string."
   (when candidate (get-text-property 0 'thread-id candidate)))
 
-(defun consult-notmuch--lookup (_ cands cand)
-  "Find CAND in CANDS."
-  (seq-find (lambda (x) (string= cand x)) cands))
-
 
 (defvar consult-notmuch--buffer-name "*consult-notmuch*"
   "Name of preview and result buffers.")
@@ -159,22 +160,6 @@ If given, use INITIAL as the starting point of the query."
     (notmuch-tree thread-id nil nil)))
 
 
-(defvar consult--source-notmuch-buffer
-  `(:name      "Notmuch Buffer"
-    :narrow    (?n . "Notmuch")
-    :hidden    t
-    :category  buffer
-    :face      consult-buffer
-    :history   buffer-name-history
-    :state     ,#'consult--buffer-state
-    :items
-    ,(lambda ()
-       (mapcar #'buffer-name
-               (seq-filter #'notmuch-interesting-buffer
-                           (consult--cached-buffers)))))
-  "Notmuch buffer candidate source for `consult-buffer'.")
-
-
 ;;;###autoload
 (defun consult-notmuch (&optional initial)
   "Search for your email in notmuch, showing single messages.
@@ -188,6 +173,24 @@ If given, use INITIAL as the starting point of the query."
 If given, use INITIAL as the starting point of the query."
   (interactive)
   (consult-notmuch--tree (consult-notmuch--search initial)))
+
+(defun consult-notmuch--interesting-buffers ()
+  "Returns a list of names of buffers with interesting notmuch data."
+  (seq-map #'buffer-name
+           (seq-filter #'notmuch-interesting-buffer
+                       (consult--cached-buffers))))
+
+;;;###autoload
+(defvar consult-notmuch-buffer-source
+  '(:name "Notmuch Buffer"
+    :narrow (?n . "Notmuch")
+    :hidden t
+    :category buffer
+    :face consult-buffer
+    :history buffer-name-history
+    :state consult--buffer-state
+    :items consult-notmuch--interesting-buffers)
+  "Notmuch buffer candidate source for `consult-buffer'.")
 
 (provide 'consult-notmuch)
 ;;; consult-notmuch.el ends here
