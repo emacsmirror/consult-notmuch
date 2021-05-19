@@ -46,7 +46,7 @@
 
 (defgroup consult-notmuch nil
   "Options for consult-notmuch."
-  :group 'notmuch)
+  :group 'consult)
 
 (defface consult-notmuch-date-face
   '((t :inherit notmuch-search-date))
