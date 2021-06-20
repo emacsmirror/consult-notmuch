@@ -5,7 +5,7 @@
 ;; Keywords: mail
 ;; License: GPL-3.0-or-later
 ;; Version: 0.3
-;; Package-Requires: ((emacs "26.1") (consult "0.5") (notmuch "0.21"))
+;; Package-Requires: ((emacs "26.1") (consult "0.8") (notmuch "0.21"))
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
 
@@ -84,7 +84,7 @@ If given, use INITIAL as the starting point of the query."
                    (consult--async-map #'consult-notmuch--transformer))
                  :prompt "Notmuch search: "
                  :require-match t
-                 :initial (concat consult-async-default-split initial)
+                 :initial (consult--async-split-initial initial)
                  :history 'consult-notmuch-history
                  :state #'consult-notmuch--preview
                  :lookup #'consult--lookup-member
