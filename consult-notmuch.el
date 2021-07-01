@@ -85,7 +85,7 @@ If given, use INITIAL as the starting point of the query."
                  :prompt "Notmuch search: "
                  :require-match t
                  :initial (consult--async-split-initial initial)
-                 :history 'consult-notmuch-history
+                 :history '(:input consult-notmuch-history)
                  :state #'consult-notmuch--preview
                  :lookup #'consult--lookup-member
                  :category 'notmuch-result
