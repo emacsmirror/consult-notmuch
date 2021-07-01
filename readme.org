@@ -1,8 +1,8 @@
+#+property: header-args :lexical t :noweb tangle
 #+title:  notmuch queries via consult
 #+date: <2021-03-11 00:00>
 #+filetags: emacs norss
 #+description: notmuch queries with completing read provided by consult
-#+property: header-args :noweb tangle
 #+auto_tangle: t
 
 This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  It
@@ -212,7 +212,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
                        :prompt "Notmuch search: "
                        :require-match t
                        :initial (consult--async-split-initial initial)
-                       :history 'consult-notmuch-history
+                       :history '(:input consult-notmuch-history)
                        :state #'consult-notmuch--preview
                        :lookup #'consult--lookup-member
                        :category 'notmuch-result
