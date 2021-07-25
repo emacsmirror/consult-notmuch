@@ -176,9 +176,10 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--interesting-buffers ()
   "Returns a list of names of buffers with interesting notmuch data."
-  (seq-map #'buffer-name
-           (seq-filter #'notmuch-interesting-buffer
-                       (consult--cached-buffers))))
+  (consult--buffer-query
+   :as (lambda (buf)
+         (when (notmuch-interesting-buffer buf)
+           (buffer-name buf)))))
 
 ;;;###autoload
 (defvar consult-notmuch-buffer-source
