@@ -3,7 +3,6 @@
 #+date: <2021-03-11 00:00>
 #+filetags: emacs norss
 #+description: notmuch queries with completing read provided by consult
-#+auto_tangle: t
 
 This package provides [[https://notmuchmail.org/][notmuch]] queries in emacs using [[https://github.com/minad/consult][consult]].  It
 offers interactive functions to launch search processes using the
@@ -176,20 +175,6 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     #+end_src
 
-*** Notmuch command
-    Usually, we won't need to customize the command we pass to consult
-    since notmuch will be in our path and we don't need special flags
-    for it, but just in case:
-
-    #+begin_src emacs-lisp
-      (defcustom consult-notmuch-command "notmuch search ARG"
-        "Command to perform notmuch search."
-        :type 'string)
-    #+end_src
-
-    Note that the ~*ARG*~ marker is important: it's where consult's
-    async command helpers are going to insert our query string.
-
 * Implementation
   :PROPERTIES:
   :header-args: :noweb-ref private-functions
@@ -205,10 +190,15 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
     candidates generator will look like:
 
     #+begin_src emacs-lisp
+      (defun consult-notmuch--command (_ input)
+        "Construct a search command for emails containing INPUT."
+        `("notmuch" "search" ,input))
+
       (defun consult-notmuch--search (&optional initial)
         "Perform an asynchronous notmuch search via `consult--read'.
       If given, use INITIAL as the starting point of the query."
-        (consult--read (consult--async-command consult-notmuch-command
+        (consult--read (consult--async-command
+                           (list :command #'consult-notmuch--command)
                          (consult--async-map #'consult-notmuch--transformer))
                        :prompt "Notmuch search: "
                        :require-match t
@@ -399,8 +389,8 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       ;; Maintainer: Jose A Ortega Ruiz
       ;; Keywords: mail
       ;; License: GPL-3.0-or-later
-      ;; Version: 0.3
-      ;; Package-Requires: ((emacs "26.1") (consult "0.8") (notmuch "0.21"))
+      ;; Version: 0.4
+      ;; Package-Requires: ((emacs "26.1") (consult "0.9") (notmuch "0.31"))
       ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
       #+end_src

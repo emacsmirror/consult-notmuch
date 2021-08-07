@@ -4,8 +4,8 @@
 ;; Maintainer: Jose A Ortega Ruiz
 ;; Keywords: mail
 ;; License: GPL-3.0-or-later
-;; Version: 0.3
-;; Package-Requires: ((emacs "26.1") (consult "0.8") (notmuch "0.21"))
+;; Version: 0.4
+;; Package-Requires: ((emacs "26.1") (consult "0.9") (notmuch "0.31"))
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
 
@@ -64,9 +64,6 @@
   '((t :inherit notmuch-search-subject))
   "Face used in matching messages for the subject field.")
 
-(defcustom consult-notmuch-command "notmuch search ARG"
-  "Command to perform notmuch search."
-  :type 'string)
 
 (defcustom consult-notmuch-authors-width 20
   "Maximum width of the authors column in search results."
@@ -77,10 +74,15 @@
   :type 'integer)
 
 
+(defun consult-notmuch--command (_ input)
+  "Construct a search command for emails containing INPUT."
+  `("notmuch" "search" ,input))
+
 (defun consult-notmuch--search (&optional initial)
   "Perform an asynchronous notmuch search via `consult--read'.
 If given, use INITIAL as the starting point of the query."
-  (consult--read (consult--async-command consult-notmuch-command
+  (consult--read (consult--async-command
+                     (list :command #'consult-notmuch--command)
                    (consult--async-map #'consult-notmuch--transformer))
                  :prompt "Notmuch search: "
                  :require-match t
