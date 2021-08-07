@@ -74,7 +74,7 @@
   :type 'integer)
 
 
-(defun consult-notmuch--command (_ input)
+(defun consult-notmuch--command (input)
   "Construct a search command for emails containing INPUT."
   `("notmuch" "search" ,input))
 
@@ -82,7 +82,7 @@
   "Perform an asynchronous notmuch search via `consult--read'.
 If given, use INITIAL as the starting point of the query."
   (consult--read (consult--async-command
-                     (list :command #'consult-notmuch--command)
+                     #'consult-notmuch--command
                    (consult--async-map #'consult-notmuch--transformer))
                  :prompt "Notmuch search: "
                  :require-match t
