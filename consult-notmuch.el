@@ -73,6 +73,9 @@
   "Minimum width of the counts column in search results."
   :type 'integer)
 
+(defcustom consult-notmuch-show-single-message t
+  "Show only the matching message or the whole thread in (pre)views."
+  :type 'boolean)
 
 (defun consult-notmuch--command (input)
   "Construct a search command for emails containing INPUT."
@@ -143,14 +146,18 @@ If given, use INITIAL as the starting point of the query."
   "Open resulting CANDIDATE in ‘notmuch-show’ view, in a preview buffer."
   (consult-notmuch--close-preview)
   (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-    (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
+    (let ((notmuch-show-only-matching-messages
+           consult-notmuch-show-single-message))
+      (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name))))
 
 
 (defun consult-notmuch--show (candidate)
   "Open resulting CANDIDATE in ‘notmuch-show’ view."
   (consult-notmuch--close-preview)
   (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-    (let* ((subject (car (last (split-string candidate "\t"))))
+    (let* ((notmuch-show-only-matching-messages
+            consult-notmuch-show-single-message)
+           (subject (car (last (split-string candidate "\t"))))
            (title (concat consult-notmuch--buffer-name " " subject)))
       (notmuch-show thread-id nil nil nil title))))
 
