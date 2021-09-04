@@ -1,4 +1,4 @@
-#+property: header-args :lexical t :noweb tangle
+#+property: header-args:emacs-lisp :lexical t :noweb tangle
 #+title:  notmuch queries via consult
 #+date: <2021-03-11 00:00>
 #+filetags: emacs norss
@@ -107,7 +107,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
     #+begin_src emacs-lisp :noweb-ref public-functions
 
       (defun consult-notmuch--interesting-buffers ()
-        "Returns a list of names of buffers with interesting notmuch data."
+        "Return a list of names of buffers with interesting notmuch data."
         (consult--buffer-query
          :as (lambda (buf)
                (when (notmuch-interesting-buffer buf)
@@ -136,44 +136,49 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
     With the above configuration, you can initiate ~consult-buffer~ and then
     type ~n~ followed by a space to narrow the set of buffers to just notmuch
     buffers.
-* Customization
-  :PROPERTIES:
-  :header-args: :noweb-ref customization
-  :END:
-  As customary, we're going to use a customization group, as a
-  subgroup of notmuch's one:
-
-  #+begin_src emacs-lisp
-    (defgroup consult-notmuch nil
-      "Options for consult-notmuch."
-      :group 'consult)
-
-  #+end_src
-
-*** Faces
-
-   We should be able to customize the faces used to display search
-   results in the minibuffer, which can have as defaults the faces
-   already defined by ~notmuch.el~:
+*** Customization
+    :PROPERTIES:
+    :header-args: :noweb-ref customization
+    :END:
+    As customary, we're going to use a customization group, as a
+    subgroup of notmuch's one:
 
     #+begin_src emacs-lisp
-      (defface consult-notmuch-date-face
-        '((t :inherit notmuch-search-date))
-        "Face used in matching messages for the date field.")
-
-      (defface consult-notmuch-count-face
-        '((t :inherit notmuch-search-count))
-        "Face used in matching messages for the mail count field.")
-
-      (defface consult-notmuch-authors-face
-        '((t :inherit notmuch-search-matching-authors))
-        "Face used in matching messages for the authors field.")
-
-      (defface consult-notmuch-subject-face
-        '((t :inherit notmuch-search-subject))
-        "Face used in matching messages for the subject field.")
+      (defgroup consult-notmuch nil
+        "Options for `consult-notmuch'."
+        :group 'consult)
 
     #+end_src
+
+    and our first user option will tell us whether we display single
+    messages in the matches list (extracted via ~notmuch-show~) or thread
+    groups (a la ~notmuch-search~):
+
+    #+begin_src emacs-lisp
+      (defcustom consult-notmuch-show-single-message t
+        "Show only the matching message or the whole thread in listings."
+        :type 'boolean)
+
+    #+end_src
+
+    When displaying search results in the minibuffer, we'll want to
+    extract the authors, date and subject and thread count for each
+    message and give them a format defined by the custom variable:
+
+    #+begin_src emacs-lisp
+      (defcustom consult-notmuch-result-format
+        '(("date" . "%12s  ")
+          ("count" . "%-7s ")
+          ("authors" . "%-20s")
+          ("subject" . "  %-54s")
+          ("tags" . " (%s)"))
+        "Format for matching candidates in minibuffer.
+      Supported fields are: date, authors, subject, count and tags."
+        :type '(alist))
+
+    #+end_src
+
+    which has the same semantics as ~notmuch-search-result-format~.
 
 * Implementation
   :PROPERTIES:
@@ -182,23 +187,27 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 *** Consult search function
     The core of our implementation should a call to ~consult--read~ with
     a closure to obtain completion candidates based on a call to
-    =notmuch search= as an asynchronous process.  For that, we'll use
-    consult's helper ~consult--async-command.~ This function takes as
-    first argument a string representing the command to be called to
-    obtain completion candidates, followed by any transformations we
-    want to apply to them before being displayed.  Thus, our
-    candidates generator will look like:
+    =notmuch search= or =notmuch show= as an asynchronous process.  For
+    that, we'll use consult's helper ~consult--async-command.~ This
+    function takes as first argument a string representing the command
+    to be called to obtain completion candidates, followed by any
+    transformations we want to apply to them before being displayed.
+    Thus, our candidates generator will look like:
 
     #+begin_src emacs-lisp
       (defun consult-notmuch--command (input)
         "Construct a search command for emails containing INPUT."
-        `("notmuch" "search" ,input))
+        (if consult-notmuch-show-single-message
+            `("notmuch" "show" "--body=false" ,input)
+          `("notmuch" "search" ,input)))
 
       (defun consult-notmuch--search (&optional initial)
         "Perform an asynchronous notmuch search via `consult--read'.
       If given, use INITIAL as the starting point of the query."
+        (setq consult-notmuch--partial-parse nil)
         (consult--read (consult--async-command
                            #'consult-notmuch--command
+                         (consult--async-filter #'identity)
                          (consult--async-map #'consult-notmuch--transformer))
                        :prompt "Notmuch search: "
                        :require-match t
@@ -210,8 +219,8 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
                        :sort nil))
     #+end_src
 
-    In the code above we're also using a preview function, [[*Parsing notmuch results][defined
-    below]], and a history variable:
+    In the code above we're also using a preview function (described
+    [[*Displaying candidates][below]]), and a history variable:
 
     #+begin_src emacs-lisp
 
@@ -220,13 +229,128 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     #+end_src
 
-*** Parsing notmuch results
-    Our candidates generator uses the following transformer to
-    pretty-print the raw results returned by the notmuch process:
+    and the candidates transformer will depend on whether we're
+    displaying threads or single messages:
 
     #+begin_src emacs-lisp
       (defun consult-notmuch--transformer (str)
         "Transform STR to notmuch display style."
+        (if consult-notmuch-show-single-message
+            (consult-notmuch--show-transformer str)
+          (consult-notmuch--search-transformer str)))
+
+    #+end_src
+
+*** Formatting search results
+    Using ~consult-notmuch-result-format~, we are going to return a
+    string representation from a plist describing the current message,
+    reusing notmuch's facility ~notmuch-tree-format-field~, with the
+    added trick of storing the current message or thread id in a text
+    property, so that it can latter be used for displaying the message
+    preview:
+
+    #+begin_src emacs-lisp
+      (defun consult-notmuch--format-field (spec msg)
+        "Return a string for SPEC given the MSG metadata."
+        (let ((field (car spec)))
+          (cond ((equal field "count")
+                 (when-let (cnt (plist-get msg :count))
+                   (format (cdr spec) cnt)))
+                ((equal field "tags")
+                 (when (plist-get msg :tags)
+                   (notmuch-tree-format-field "tags" (cdr spec) msg)))
+                (t (notmuch-tree-format-field field (cdr spec) msg)))))
+
+      (defun consult-notmuch--format-candidate (msg)
+        "Format the result (MSG) of parsing a notmuch show information unit."
+        (when-let (id (plist-get msg :id))
+          (let ((result-string))
+            (dolist (spec consult-notmuch-result-format)
+              (when-let (field (consult-notmuch--format-field spec msg))
+	        (setq result-string (concat result-string field))))
+            (propertize result-string 'thread-id id))))
+
+      (defun consult-notmuch--thread-id (candidate)
+        "Recover the thread id for the given CANDIDATE string."
+        (when candidate (get-text-property 0 'thread-id candidate)))
+
+    #+end_src
+
+*** Parsing notmuch show results
+    When ~consult-notmuch-show-single-message~ is set to nil, we're
+    showing single messages as completion candidates, and, therefore,
+    we are going to need to parse the output of that command, which
+    looks like:
+
+    #+begin_example
+     message{ id:emacs-circe/circe/issues/401@github.com depth:0 ...
+     header{
+      <Sender (tags)>
+      Subject: <subject>
+      From: <from>
+      To: <to>
+      ...
+      Date: Fri, 03 Sep 2021 12:46:53 -0700
+     header}
+      message}
+    #+end_example
+
+
+    Now, all we need is to parse the output of notmuch show and fill
+    in the message metadata plist:
+
+    #+begin_src emacs-lisp
+      (defvar consult-notmuch--partial-parse nil
+        "Internal variable for parsing status.")
+      (defvar consult-notmuch--partial-headers nil
+        "Internal variable for parsing status.")
+      (defvar consult-notmuch--info nil
+        "Internal variable for parsing status.")
+
+      (defun consult-notmuch--set (k v)
+        "Set the value V for property K in the message we're currently parsing."
+        (setq consult-notmuch--partial-parse
+              (plist-put consult-notmuch--partial-parse k v)))
+
+      (defun consult-notmuch--show-transformer (str)
+        "Parse output STR of notmuch show, extracting its components."
+        (if (string-prefix-p "message}" str)
+            (prog1
+                (consult-notmuch--format-candidate
+                 (consult-notmuch--set :headers consult-notmuch--partial-headers))
+              (setq consult-notmuch--partial-parse nil
+                    consult-notmuch--partial-headers nil
+                    consult-notmuch--info nil))
+          (cond ((string-match "message{ \\(id:[^ ]+\\) .+" str)
+                 (consult-notmuch--set :id (match-string 1 str))
+                 (consult-notmuch--set :match t))
+                ((string-prefix-p "header{" str)
+                 (setq consult-notmuch--info t))
+                ((and str consult-notmuch--info)
+                 (when (string-match "\\(.+\\) (\\([^)]+\\)) (\\([^)]+\\))$" str)
+                   (consult-notmuch--set :Subject (match-string 1 str))
+                   (consult-notmuch--set :date_relative (match-string 2 str))
+                   (consult-notmuch--set :tags (split-string (match-string 3 str))))
+                 (setq consult-notmuch--info nil))
+                ((string-match "\\(Subject\\|From\\|To\\|Cc\\|Date\\): \\(.+\\)"
+                               str)
+                 (let ((k (intern (format ":%s" (match-string 1 str))))
+                       (v (match-string 2 str)))
+                   (setq consult-notmuch--partial-headers
+                         (plist-put consult-notmuch--partial-headers k v)))))
+          nil))
+
+    #+end_src
+
+*** Parsing notmuch search results
+    When ~consult-notmuch-show-single-message~ is set, our candidates
+    generator uses the following transformer to format the raw
+    results returned by the notmuch search command.  Here, every line
+    contains already all elements we need:
+
+    #+begin_src emacs-lisp
+      (defun consult-notmuch--search-transformer (str)
+        "Transform STR from notmuch search to notmuch display style."
         (when (string-match "thread:" str)
           (let* ((thread-id (car (split-string str "\\ +")))
                  (date (substring str 24 37))
@@ -234,54 +358,15 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
                  (c0 (string-match "[[]" mid))
                  (c1 (string-match "[]]" mid))
                  (count (substring mid c0 (1+ c1)))
-                 (auths (truncate-string-to-width
-                         (string-trim (nth 1 (split-string mid "[];]")))
-                         consult-notmuch-authors-width))
-                 (subject (truncate-string-to-width
-                           (string-trim (nth 1 (split-string mid "[;]")))
-                           (- (frame-width)
-                              2
-                              consult-notmuch-counts-width
-                              consult-notmuch-authors-width)))
-                 (fmt (format "%%s\t%%%ds\t%%%ds\t%%s"
-                              consult-notmuch-counts-width
-                              consult-notmuch-authors-width)))
-            (propertize
-             (format fmt
-                     (propertize date 'face 'consult-notmuch-date-face)
-                     (propertize count 'face 'consult-notmuch-count-face)
-                     (propertize auths 'face 'consult-notmuch-authors-face)
-                     (propertize subject 'face 'consult-notmuch-subject-face))
-             'thread-id thread-id))))
-
-    #+end_src
-
-    We use our [[*Faces][customizable faces]], extract a number of substrings and
-    play a little trick: to display our candidate, ~notmuch.el~ will
-    need the thread identifier, but we don't want to show it in our
-    nicely formatter minibuffer entry.  We simply store it as a
-    property of the candidate string, and will use the following
-    helper function to recover it at display time:
-
-    #+begin_src emacs-lisp
-      (defun consult-notmuch--thread-id (candidate)
-        "Recover the thread id for the given CANDIDATE string."
-        (when candidate (get-text-property 0 'thread-id candidate)))
-
-    #+end_src
-
-    We have also made the width of the authors and counts fields
-    customizable variables:
-
-    #+begin_src emacs-lisp :noweb-ref customization
-
-      (defcustom consult-notmuch-authors-width 20
-        "Maximum width of the authors column in search results."
-        :type 'integer)
-
-      (defcustom consult-notmuch-counts-width 10
-        "Minimum width of the counts column in search results."
-        :type 'integer)
+                 (auths (string-trim (nth 1 (split-string mid "[];]"))))
+                 (subject (string-trim (nth 1 (split-string mid "[;]"))))
+                 (headers (list :Subject subject :From auths))
+                 (msg (list :id thread-id
+                            :match t
+                            :headers headers
+                            :count count
+                            :date_relative date)))
+            (consult-notmuch--format-candidate msg))))
 
     #+end_src
 
@@ -304,25 +389,17 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
           "Name of preview and result buffers.")
 
         (defun consult-notmuch--close-preview ()
-          "Name says it all (and checkdoc is a bit silly, insisting on this)."
+          "Close the message preview, by killing its buffer."
           (when (get-buffer consult-notmuch--buffer-name)
             (kill-buffer consult-notmuch--buffer-name)))
 
       #+end_src
 
-      and use ~notmuch-show~ to show a candidate. We are also going to
-      have a customizable flag for deciding if the preview should
-      include the whole thread or just a single matching message:
+      and use ~notmuch-show~ to show a candidate.
 
-      #+begin_src emacs-lisp :noweb-ref customization
-        (defcustom consult-notmuch-show-single-message t
-          "Show only the matching message or the whole thread in (pre)views."
-          :type 'boolean)
-      #+end_src
-
-      Remember that we've stashed the thread id needed by that
-      function as a property of of our candidate string, and provided
-      an accessor for it:
+      Remember that we've stashed the message or thread id needed by
+      that function as a property of of our candidate string, and
+      provided an accessor for it:
 
       #+begin_src emacs-lisp
 
@@ -330,9 +407,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
           "Open resulting CANDIDATE in ‘notmuch-show’ view, in a preview buffer."
           (consult-notmuch--close-preview)
           (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-            (let ((notmuch-show-only-matching-messages
-                   consult-notmuch-show-single-message))
-              (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name))))
+            (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
 
       #+end_src
 
@@ -403,7 +478,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       ;; Maintainer: Jose A Ortega Ruiz
       ;; Keywords: mail
       ;; License: GPL-3.0-or-later
-      ;; Version: 0.4
+      ;; Version: 0.5
       ;; Package-Requires: ((emacs "26.1") (consult "0.9") (notmuch "0.31"))
       ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
