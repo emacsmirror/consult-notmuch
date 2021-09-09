@@ -174,7 +174,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
           ("tags" . " (%s)"))
         "Format for matching candidates in minibuffer.
       Supported fields are: date, authors, subject, count and tags."
-        :type '(alist))
+        :type '(alist :key-type string :value-type string))
 
     #+end_src
 

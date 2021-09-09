@@ -60,7 +60,7 @@
     ("tags" . " (%s)"))
   "Format for matching candidates in minibuffer.
 Supported fields are: date, authors, subject, count and tags."
-  :type '(alist))
+  :type '(alist :key-type string :value-type string))
 
 
 (defun consult-notmuch--command (input)
