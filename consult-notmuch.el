@@ -113,7 +113,8 @@ If given, use INITIAL as the starting point of the query."
       (dolist (spec consult-notmuch-result-format)
         (when-let (field (consult-notmuch--format-field spec msg))
 	  (setq result-string (concat result-string field))))
-      (propertize result-string 'thread-id id))))
+      (propertize result-string 'thread-id id
+                  'tags (plist-get msg :tags)))))
 
 (defun consult-notmuch--thread-id (candidate)
   "Recover the thread id for the given CANDIDATE string."
@@ -170,11 +171,14 @@ If given, use INITIAL as the starting point of the query."
            (auths (string-trim (nth 1 (split-string mid "[];]"))))
            (subject (string-trim (nth 1 (split-string mid "[;]"))))
            (headers (list :Subject subject :From auths))
+           (t0 (string-match "([^)]+)\\s-*$" mid))
+           (tags (split-string (substring mid (1+  t0) -1)))
            (msg (list :id thread-id
                       :match t
                       :headers headers
                       :count count
-                      :date_relative date)))
+                      :date_relative date
+                      :tags tags)))
       (consult-notmuch--format-candidate msg))))
 
 
