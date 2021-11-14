@@ -267,8 +267,9 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
           (let ((result-string))
             (dolist (spec consult-notmuch-result-format)
               (when-let (field (consult-notmuch--format-field spec msg))
-	        (setq result-string (concat result-string field))))
-            (propertize result-string 'thread-id id))))
+                (setq result-string (concat result-string field))))
+            (propertize result-string 'thread-id id
+                        'tags (plist-get msg :tags)))))
 
       (defun consult-notmuch--thread-id (candidate)
         "Recover the thread id for the given CANDIDATE string."
@@ -360,11 +361,14 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
                  (auths (string-trim (nth 1 (split-string mid "[];]"))))
                  (subject (string-trim (nth 1 (split-string mid "[;]"))))
                  (headers (list :Subject subject :From auths))
+                 (t0 (string-match "([^)]+)\\s-*$" mid))
+                 (tags (split-string (substring mid (1+  t0) -1)))
                  (msg (list :id thread-id
                             :match t
                             :headers headers
                             :count count
-                            :date_relative date)))
+                            :date_relative date
+                            :tags tags)))
             (consult-notmuch--format-candidate msg))))
 
     #+end_src
@@ -443,6 +447,74 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
             (notmuch-tree thread-id nil nil)))
 
       #+end_src
+
+* Integration with Embark
+
+** Embark actions
+We can integrate ~consult-notmuch~ with Embark by defining a keymap with actions on notmuch messages and associating it with the completion category of ~notmuch-result~. Here we bind the function to tag search results to ~+~ and ~-~ like in notmuch buffers:
+
+#+BEGIN_SRC emacs-lisp
+  (defvar embark-notmuch-map 
+      (let ((map (make-sparse-keymap))) 
+        (define-key map (kbd "+") 'embark-notmuch-tag)
+        (define-key map (kbd "-") 'embark-notmuch-tag)
+        map)
+      "Keymap for actions on Notmuch entries.")
+
+  (add-to-list 'embark-keymap-alist '(notmuch-result . embark-notmuch-map))
+#+END_SRC
+
+~embark-notmuch-tag~ should take as argument the search result as a propertized message string. Because Embark feeds it this string, this function does not need to be interactive:
+
+#+BEGIN_SRC emacs-lisp
+(defun embark-notmuch-tag (msg)
+    (when-let* ((thread-id (consult-notmuch--thread-id msg))
+                (tags (get-text-property 0 'tags msg))
+                (tag-changes (notmuch-read-tag-changes
+                              tags "Tags: "
+                             "+")))
+      (notmuch-tag (concat "(" thread-id ")")
+                   tag-changes)))
+#+END_SRC
+
+We can also create bespoke functions to automatically tag a message with certain tags using Embark. For example, here is a function that returns a tagger:
+
+#+BEGIN_SRC emacs-lisp
+  (defun embark-notmuch-make-tagger (tags)
+      "Make a function to tag a message with TAGS."
+      (lambda (msg)
+        "Tag a notmuch message using Embark."
+        (when-let ((thread-id (consult-notmuch--thread-id msg)))
+          (notmuch-tag (concat "(" thread-id ")")
+                       (split-string tags)))))
+#+END_SRC
+
+We use this to map Embark actions that trash, archive or flag messages to ~d~, ~a~ and ~f~ respectively:
+
+#+BEGIN_SRC emacs-lisp
+  (define-key embark-notmuch-map (kbd "d") (embark-notmuch-make-tagger "+trash -inbox"))
+  (define-key embark-notmuch-map (kbd "a") (embark-notmuch-make-tagger "-inbox"))
+  (define-key embark-notmuch-map (kbd "f") (embark-notmuch-make-tagger "+flagged"))
+#+END_SRC
+
+** Embark export
+
+To export search results to a notmuch search buffer with Embark, we can define an exporter:
+
+#+BEGIN_SRC emacs-lisp
+  (defun embark-export-consult-notmuch (msgs)
+      "Create a notmuch search buffer listing messages."
+      (notmuch-search
+       (concat "("
+               (mapconcat #'consult-notmuch--thread-id msgs " ")
+               ")")))
+#+END_SRC
+
+Associating this exporter with ~consult-notmuch~ is a matter of adding to ~embark-exporters-alist~:
+
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'embark-exporters-alist '(notmuch-result . embark-export-consult-notmuch))
+#+END_SRC
 
 * Package boilerplate                                            :noexport:
 *** consult-notmuch.el
