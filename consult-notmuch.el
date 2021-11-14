@@ -151,10 +151,9 @@ If given, use INITIAL as the starting point of the query."
              (consult-notmuch--set :date_relative (match-string 2 str))
              (consult-notmuch--set :tags (split-string (match-string 3 str))))
            (setq consult-notmuch--info nil))
-          ((string-match "\\(Subject\\|From\\|To\\|Cc\\|Date\\): \\(.+\\)"
-                         str)
+          ((string-match "\\(Subject\\|From\\|To\\|Cc\\|Date\\): \\(.+\\)?" str)
            (let ((k (intern (format ":%s" (match-string 1 str))))
-                 (v (match-string 2 str)))
+                 (v (or (match-string 2 str) "")))
              (setq consult-notmuch--partial-headers
                    (plist-put consult-notmuch--partial-headers k v)))))
     nil))
