@@ -451,7 +451,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 * Integration with Embark
 
 ** Embark actions
-We can integrate ~consult-notmuch~ with Embark by defining a keymap with actions on notmuch messages and associating it with the completion category of ~notmuch-result~. Here we bind the function to tag search results to ~+~ and ~-~ like in notmuch buffers:
+We can integrate ~consult-notmuch~ with Embark by defining a keymap with actions on notmuch messages and associating it with the completion category of ~notmuch-result~. In this keymap we associate ~+~ and ~-~ (like in notmuch buffers) to a function that tags a message:
 
 #+BEGIN_SRC emacs-lisp
   (defvar embark-notmuch-map 
