@@ -112,7 +112,7 @@ If given, use INITIAL as the starting point of the query."
     (let ((result-string))
       (dolist (spec consult-notmuch-result-format)
         (when-let (field (consult-notmuch--format-field spec msg))
-	  (setq result-string (concat result-string field))))
+          (setq result-string (concat result-string field))))
       (propertize result-string 'thread-id id
                   'tags (plist-get msg :tags)))))
 
@@ -215,6 +215,35 @@ If given, use INITIAL as the starting point of the query."
   (when-let ((thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-tree thread-id nil nil)))
 
+
+;; Embark Integration:
+(with-eval-after-load 'embark
+  (defvar consult-notmuch-map 
+      (let ((map (make-sparse-keymap))) 
+        (define-key map (kbd "+") 'consult-notmuch-tag)
+        (define-key map (kbd "-") 'consult-notmuch-tag)
+        map)
+      "Keymap for actions on Notmuch entries.")
+  
+  (set-keymap-parent consult-notmuch-map embark-general-map)
+  (add-to-list 'embark-keymap-alist '(notmuch-result . consult-notmuch-map))
+  
+  (defun consult-notmuch-tag (msg)
+      (when-let* ((thread-id (consult-notmuch--thread-id msg))
+                  (tags (get-text-property 0 'tags msg))
+                  (tag-changes (notmuch-read-tag-changes
+                                tags "Tags: "
+                               "+")))
+        (notmuch-tag (concat "(" thread-id ")")
+                     tag-changes)))
+  
+  (defun consult-notmuch-export (msgs)
+      "Create a notmuch search buffer listing messages."
+      (notmuch-search
+       (concat "("
+               (mapconcat #'consult-notmuch--thread-id msgs " ")
+               ")")))
+  (add-to-list 'embark-exporters-alist '(notmuch-result . consult-notmuch-export)))
 
 ;;;###autoload
 (defun consult-notmuch (&optional initial)
