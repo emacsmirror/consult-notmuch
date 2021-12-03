@@ -525,5 +525,5 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
 * Acknowledgements
 
-  This implementation was heavily inspired by [[https://github.com/fuxialexander/counsel-notmuch/][Alexander Fu Xi's
-  counsel-notmuch]].
+  The initial implementation of ~consult-notmuch~ was heavily inspired
+  by [[https://github.com/fuxialexander/counsel-notmuch/][Alexander Fu Xi's counsel-notmuch]].
