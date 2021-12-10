@@ -457,12 +457,12 @@ on notmuch messages and associating it with the completion category of
 buffers) to a function that tags a message:
 
 #+begin_src emacs-lisp :noweb-ref embark-actions
-  (defvar consult-notmuch-map 
-      (let ((map (make-sparse-keymap))) 
-        (define-key map (kbd "+") 'consult-notmuch-tag)
-        (define-key map (kbd "-") 'consult-notmuch-tag)
-        map)
-      "Keymap for actions on Notmuch entries.")
+  (defvar consult-notmuch-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "+") 'consult-notmuch-tag)
+      (define-key map (kbd "-") 'consult-notmuch-tag)
+      map)
+    "Keymap for actions on Notmuch entries.")
 
   (set-keymap-parent consult-notmuch-map embark-general-map)
   (add-to-list 'embark-keymap-alist '(notmuch-result . consult-notmuch-map))
@@ -475,13 +475,10 @@ to be interactive:
 
 #+begin_src emacs-lisp :noweb-ref embark-actions
   (defun consult-notmuch-tag (msg)
-      (when-let* ((thread-id (consult-notmuch--thread-id msg))
-                  (tags (get-text-property 0 'tags msg))
-                  (tag-changes (notmuch-read-tag-changes
-                                tags "Tags: "
-                               "+")))
-        (notmuch-tag (concat "(" thread-id ")")
-                     tag-changes)))
+    (when-let* ((thread-id (consult-notmuch--thread-id msg))
+                (tags (get-text-property 0 'tags msg))
+                (tag-changes (notmuch-read-tag-changes tags "Tags: " "+")))
+      (notmuch-tag (concat "(" thread-id ")") tag-changes)))
 
 #+end_src
 
@@ -490,12 +487,11 @@ tags using Embark. For example, here is a function that returns a tagger:
 
 #+begin_src emacs-lisp
   (defun consult-notmuch-make-tagger (tags)
-      "Make a function to tag a message with TAGS."
-      (lambda (msg)
-        "Tag a notmuch message using Embark."
-        (when-let ((thread-id (consult-notmuch--thread-id msg)))
-          (notmuch-tag (concat "(" thread-id ")")
-                       (split-string tags)))))
+    "Make a function to tag a message with TAGS."
+    (lambda (msg)
+      "Tag a notmuch message using Embark."
+      (when-let ((thread-id (consult-notmuch--thread-id msg)))
+        (notmuch-tag (concat "(" thread-id ")") (split-string tags)))))
 #+end_src
 
 We use this to map Embark actions that trash, archive or flag messages to ~d~,
@@ -514,11 +510,11 @@ an exporter:
 
 #+begin_src emacs-lisp :noweb-ref embark-actions
   (defun consult-notmuch-export (msgs)
-      "Create a notmuch search buffer listing messages."
-      (notmuch-search
-       (concat "("
-               (mapconcat #'consult-notmuch--thread-id msgs " ")
-               ")")))
+    "Create a notmuch search buffer listing messages."
+    (notmuch-search
+     (concat "("
+             (mapconcat #'consult-notmuch--thread-id msgs " ")
+             ")")))
 #+end_src
 
 Associating this exporter with ~consult-notmuch~ is a matter of adding to
@@ -528,7 +524,7 @@ Associating this exporter with ~consult-notmuch~ is a matter of adding to
   (add-to-list 'embark-exporters-alist '(notmuch-result . consult-notmuch-export))
 #+end_src
 
-* Package boilerplate                                            :noexport:
+* Package boilerplate
 *** consult-notmuch.el
       The file [[./consult-notmuch.el][consult-notmuch.el]] is automatically generated from this org
       document, and has the typical breakdown in sections of an emacs
@@ -615,3 +611,7 @@ Associating this exporter with ~consult-notmuch~ is a matter of adding to
 
   The initial implementation of ~consult-notmuch~ was heavily inspired
   by [[https://github.com/fuxialexander/counsel-notmuch/][Alexander Fu Xi's counsel-notmuch]].
+
+  This package also contains code contributions from Karthik
+  Chikmagalur and Miciah Masters, and has also benefited from their
+  ideas for new functionaliy.
