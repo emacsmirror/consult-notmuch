@@ -100,7 +100,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 *** An appetiser: address search
 
     As a simple example of how the simplest asynchronous consult query
-    looks, let's write a function that allows us selecting a mail
+    looks, let's write a function that allows us to select a mail
     address using a notmuch address query, which in the CLI looks like
 
     #+begin_src shell :tangle no
@@ -117,7 +117,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
           (completing-read "Notmuch address: " (split-string res "\n"))))
     #+end_src
 
-    If you notmuch database is not that big, this approach actually
+    If your notmuch database is not that big, this approach actually
     works reasonably well, but it doesn't scale with its size.  That's
     where an asynchronous command can help: we call the shell command
     as the input varies, collecting and displaying the results as
