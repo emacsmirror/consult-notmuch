@@ -256,6 +256,21 @@ If given, use INITIAL as the starting point of the query."
   (interactive)
   (consult-notmuch--tree (consult-notmuch--search initial)))
 
+(defun consult-notmuch--address-command (input)
+  "Spec for an async command querying a notmuch address with INPUT."
+  `("notmuch" "address" "--format=text" ,input))
+
+;;;###autoload
+(defun consult-notmuch-address ()
+  "Search through the notmuch database for email addresses.
+The selected address is pushed to the kill ring."
+  (interactive)
+  (let ((address (consult--read (consult--async-command
+		                    #'consult-notmuch--address-command)
+		                :prompt "Notmuch addresses: "
+		                :sort nil)))
+    (kill-new (message "%s" address))))
+
 (defun consult-notmuch--interesting-buffers ()
   "Return a list of names of buffers with interesting notmuch data."
   (consult--buffer-query
