@@ -658,3 +658,6 @@ Associating this exporter with ~consult-notmuch~ is a matter of adding to
   This package also contains code contributions from Karthik
   Chikmagalur and Miciah Masters, and has also benefited from their
   ideas for new functionaliy.
+
+  S.M Mukarram Nainar suggested the idea and a working implementation
+  for ~consult-notmuch-address~.
