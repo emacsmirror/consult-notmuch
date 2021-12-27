@@ -126,21 +126,44 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     #+begin_src emacs-lisp :noweb-ref public-functions
       (defun consult-notmuch--address-command (input)
-        "Spec for an async command querying a notmuch address with INPUT."
-        `("notmuch" "address" "--format=text" ,input))
+	"Spec for an async command querying a notmuch address with INPUT."
+	`("notmuch" "address" "--format=text" ,input))
+
+      (defun consult-notmuch-address-compose (address)
+	"Compose an email to a given address"
+	(let ((other-headers
+	 (and notmuch-always-prompt-for-sender
+	      (list (cons 'From (notmuch-mua-prompt-for-sender))))))
+	  (notmuch-mua-mail address nil other-headers nil (notmuch-mua-get-switch-function))))
+
+      (defun consult-notmuch--address-prompt ()
+	(consult--read (consult--async-command
+			   #'consult-notmuch--address-command)
+		       :prompt "Notmuch addresses: "
+		       :sort nil
+		       :category 'notmuch-address))
 
       ;;;###autoload
-      (defun consult-notmuch-address ()
-        "Search through the notmuch database for email addresses.
-      The selected address is pushed to the kill ring."
-        (interactive)
-        (let ((address (consult--read (consult--async-command
-		                          #'consult-notmuch--address-command)
-		                      :prompt "Notmuch addresses: "
-		                      :sort nil)))
-          (kill-new (message "%s" address))))
-    #+end_src
+      (defun consult-notmuch-address (&optional multi-select-p initial-addr)
+	"Search through the notmuch database for an email address and compose mail to it.
+      With a prefix argument, prompt multiple times until there is an empty input."
+	(interactive "P")
+	(if multi-select-p
+	    (cl-loop for addr = (consult-notmuch--address-prompt)
+		     until (eql (length addr) 0)
+		     collect addr into addrs
+		     finally (consult-notmuch-address-compose
+			      (mapconcat #'identity
+					 (if initial-addr
+					     (cons initial-addr addrs)
+					   addrs)
+					 ", ")))
+	  (consult-notmuch-address-compose (consult-notmuch--address-prompt))))
 
+
+
+
+    #+end_src
 *** Buffer narrowing
 
     If you have many buffers, you may want a convenient way to switch
@@ -509,6 +532,23 @@ buffers) to a function that tags a message:
 
   (set-keymap-parent consult-notmuch-map embark-general-map)
   (add-to-list 'embark-keymap-alist '(notmuch-result . consult-notmuch-map))
+#+end_src
+
+Additionally, we should integrate our address selection functions as well, so that you can act on the addresses.
+
+#+BEGIN_SRC emacs-lisp :noweb-ref embark-actions
+  (defun consult-notmuch--address-to-multi-select (address)
+    "Select more email addresses, in addition to the current selection"
+    (consult-notmuch-address t address))
+
+  (defvar consult-notmuch-address-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "c") #'consult-notmuch-address-compose)
+      (define-key map (kbd "m") #'consult-notmuch--address-to-multi-select)
+      map))
+
+  (set-keymap-parent consult-notmuch-address-map embark-general-map)
+  (add-to-list 'embark-keymap-alist '(notmuch-address . consult-notmuch-address-map))
 
 #+end_src
 
