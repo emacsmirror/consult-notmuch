@@ -134,7 +134,11 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 	(let ((other-headers
 	 (and notmuch-always-prompt-for-sender
 	      (list (cons 'From (notmuch-mua-prompt-for-sender))))))
-	  (notmuch-mua-mail address nil other-headers nil (notmuch-mua-get-switch-function))))
+	  (notmuch-mua-mail address
+                            nil
+                            other-headers
+                            nil
+                            (notmuch-mua-get-switch-function))))
 
       (defun consult-notmuch--address-prompt ()
 	(consult--read (consult--async-command
@@ -146,7 +150,8 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       ;;;###autoload
       (defun consult-notmuch-address (&optional multi-select-p initial-addr)
 	"Search through the notmuch database for an email address and compose mail to it.
-      With a prefix argument, prompt multiple times until there is an empty input."
+      With a prefix argument, prompt multiple times until there
+      is an empty input."
 	(interactive "P")
 	(if multi-select-p
 	    (cl-loop for addr = (consult-notmuch--address-prompt)
@@ -159,9 +164,6 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 					   addrs)
 					 ", ")))
 	  (consult-notmuch-address-compose (consult-notmuch--address-prompt))))
-
-
-
 
     #+end_src
 *** Buffer narrowing
@@ -515,97 +517,99 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
       #+end_src
 
 * Integration with Embark
+*** Embark actions
+    We can integrate ~consult-notmuch~ with Embark by defining a keymap
+    with actions on notmuch messages and associating it with the
+    completion category of ~notmuch-result~. In this keymap we associate
+    ~+~ and ~-~ (like in notmuch buffers) to a function that tags a
+    message:
 
-** Embark actions
-We can integrate ~consult-notmuch~ with Embark by defining a keymap with actions
-on notmuch messages and associating it with the completion category of
-~notmuch-result~. In this keymap we associate ~+~ and ~-~ (like in notmuch
-buffers) to a function that tags a message:
+    #+begin_src emacs-lisp :noweb-ref embark-actions
+      (defvar consult-notmuch-map
+        (let ((map (make-sparse-keymap)))
+          (define-key map (kbd "+") 'consult-notmuch-tag)
+          (define-key map (kbd "-") 'consult-notmuch-tag)
+          map)
+        "Keymap for actions on Notmuch entries.")
 
-#+begin_src emacs-lisp :noweb-ref embark-actions
-  (defvar consult-notmuch-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map (kbd "+") 'consult-notmuch-tag)
-      (define-key map (kbd "-") 'consult-notmuch-tag)
-      map)
-    "Keymap for actions on Notmuch entries.")
+      (set-keymap-parent consult-notmuch-map embark-general-map)
+      (add-to-list 'embark-keymap-alist '(notmuch-result . consult-notmuch-map))
 
-  (set-keymap-parent consult-notmuch-map embark-general-map)
-  (add-to-list 'embark-keymap-alist '(notmuch-result . consult-notmuch-map))
-#+end_src
+    #+end_src
 
-Additionally, we should integrate our address selection functions as well, so that you can act on the addresses.
+    Additionally, we should integrate our address selection functions
+    as well, so that you can act on the addresses.
 
-#+BEGIN_SRC emacs-lisp :noweb-ref embark-actions
-  (defun consult-notmuch--address-to-multi-select (address)
-    "Select more email addresses, in addition to the current selection"
-    (consult-notmuch-address t address))
+    #+begin_src emacs-lisp :noweb-ref embark-actions
+      (defun consult-notmuch--address-to-multi-select (address)
+        "Select more email addresses, in addition to the current selection"
+        (consult-notmuch-address t address))
 
-  (defvar consult-notmuch-address-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map (kbd "c") #'consult-notmuch-address-compose)
-      (define-key map (kbd "m") #'consult-notmuch--address-to-multi-select)
-      map))
+      (defvar consult-notmuch-address-map
+        (let ((map (make-sparse-keymap)))
+          (define-key map (kbd "c") #'consult-notmuch-address-compose)
+          (define-key map (kbd "m") #'consult-notmuch--address-to-multi-select)
+          map))
 
-  (set-keymap-parent consult-notmuch-address-map embark-general-map)
-  (add-to-list 'embark-keymap-alist '(notmuch-address . consult-notmuch-address-map))
+      (set-keymap-parent consult-notmuch-address-map embark-general-map)
+      (add-to-list 'embark-keymap-alist
+                   '(notmuch-address . consult-notmuch-address-map))
 
-#+end_src
+    #+end_src
 
-~consult-notmuch-tag~ should take as argument the search result as a propertized
-message string. Because Embark feeds it this string, this function does not need
-to be interactive:
+    ~consult-notmuch-tag~ should take as argument the search result as a
+    propertized message string. Because Embark feeds it this string,
+    this function does not need to be interactive:
 
-#+begin_src emacs-lisp :noweb-ref embark-actions
-  (defun consult-notmuch-tag (msg)
-    (when-let* ((thread-id (consult-notmuch--thread-id msg))
-                (tags (get-text-property 0 'tags msg))
-                (tag-changes (notmuch-read-tag-changes tags "Tags: " "+")))
-      (notmuch-tag (concat "(" thread-id ")") tag-changes)))
+    #+begin_src emacs-lisp :noweb-ref embark-actions
+      (defun consult-notmuch-tag (msg)
+        (when-let* ((thread-id (consult-notmuch--thread-id msg))
+                    (tags (get-text-property 0 'tags msg))
+                    (tag-changes (notmuch-read-tag-changes tags "Tags: " "+")))
+          (notmuch-tag (concat "(" thread-id ")") tag-changes)))
 
-#+end_src
+    #+end_src
 
-We can also create bespoke functions to automatically tag a message with certain
-tags using Embark. For example, here is a function that returns a tagger:
+    We can also create bespoke functions to automatically tag a
+    message with certain tags using Embark. For example, here is a
+    function that returns a tagger:
 
-#+begin_src emacs-lisp
-  (defun consult-notmuch-make-tagger (tags)
-    "Make a function to tag a message with TAGS."
-    (lambda (msg)
-      "Tag a notmuch message using Embark."
-      (when-let ((thread-id (consult-notmuch--thread-id msg)))
-        (notmuch-tag (concat "(" thread-id ")") (split-string tags)))))
-#+end_src
+    #+begin_src emacs-lisp
+      (defun consult-notmuch-make-tagger (tags)
+        "Make a function to tag a message with TAGS."
+        (lambda (msg)
+          "Tag a notmuch message using Embark."
+          (when-let ((thread-id (consult-notmuch--thread-id msg)))
+            (notmuch-tag (concat "(" thread-id ")") (split-string tags)))))
+    #+end_src
 
-We use this to map Embark actions that trash, archive or flag messages to ~d~,
-~a~ and ~f~ respectively:
+    We use this to map Embark actions that trash, archive or flag
+    messages to ~d~, ~a~ and ~f~ respectively:
 
-#+begin_src emacs-lisp
-  (define-key consult-notmuch-map (kbd "d") (consult-notmuch-make-tagger "+trash -inbox"))
-  (define-key consult-notmuch-map (kbd "a") (consult-notmuch-make-tagger "-inbox"))
-  (define-key consult-notmuch-map (kbd "f") (consult-notmuch-make-tagger "+flagged"))
-#+end_src
+    #+begin_src emacs-lisp
+      (define-key consult-notmuch-map (kbd "d") (consult-notmuch-make-tagger "+trash -inbox"))
+      (define-key consult-notmuch-map (kbd "a") (consult-notmuch-make-tagger "-inbox"))
+      (define-key consult-notmuch-map (kbd "f") (consult-notmuch-make-tagger "+flagged"))
+    #+end_src
+*** Embark export
 
-** Embark export
+    To export search results to a notmuch search buffer with Embark,
+    we can define an exporter:
 
-To export search results to a notmuch search buffer with Embark, we can define
-an exporter:
+    #+begin_src emacs-lisp :noweb-ref embark-actions
+      (defun consult-notmuch-export (msgs)
+        "Create a notmuch search buffer listing messages."
+        (notmuch-search
+         (concat "(" (mapconcat #'consult-notmuch--thread-id msgs " ") ")")))
+    #+end_src
 
-#+begin_src emacs-lisp :noweb-ref embark-actions
-  (defun consult-notmuch-export (msgs)
-    "Create a notmuch search buffer listing messages."
-    (notmuch-search
-     (concat "("
-             (mapconcat #'consult-notmuch--thread-id msgs " ")
-             ")")))
-#+end_src
+    Associating this exporter with ~consult-notmuch~ is a matter of
+    adding to ~embark-exporters-alist~:
 
-Associating this exporter with ~consult-notmuch~ is a matter of adding to
-~embark-exporters-alist~:
-
-#+begin_src emacs-lisp :noweb-ref embark-actions
-  (add-to-list 'embark-exporters-alist '(notmuch-result . consult-notmuch-export))
-#+end_src
+    #+begin_src emacs-lisp :noweb-ref embark-actions
+      (add-to-list 'embark-exporters-alist
+                   '(notmuch-result . consult-notmuch-export))
+    #+end_src
 
 * Package boilerplate
 *** consult-notmuch.el

@@ -227,6 +227,7 @@ If given, use INITIAL as the starting point of the query."
   
   (set-keymap-parent consult-notmuch-map embark-general-map)
   (add-to-list 'embark-keymap-alist '(notmuch-result . consult-notmuch-map))
+  
   (defun consult-notmuch--address-to-multi-select (address)
     "Select more email addresses, in addition to the current selection"
     (consult-notmuch-address t address))
@@ -238,7 +239,8 @@ If given, use INITIAL as the starting point of the query."
       map))
   
   (set-keymap-parent consult-notmuch-address-map embark-general-map)
-  (add-to-list 'embark-keymap-alist '(notmuch-address . consult-notmuch-address-map))
+  (add-to-list 'embark-keymap-alist
+               '(notmuch-address . consult-notmuch-address-map))
   
   (defun consult-notmuch-tag (msg)
     (when-let* ((thread-id (consult-notmuch--thread-id msg))
@@ -249,10 +251,9 @@ If given, use INITIAL as the starting point of the query."
   (defun consult-notmuch-export (msgs)
     "Create a notmuch search buffer listing messages."
     (notmuch-search
-     (concat "("
-             (mapconcat #'consult-notmuch--thread-id msgs " ")
-             ")")))
-  (add-to-list 'embark-exporters-alist '(notmuch-result . consult-notmuch-export)))
+     (concat "(" (mapconcat #'consult-notmuch--thread-id msgs " ") ")")))
+  (add-to-list 'embark-exporters-alist
+               '(notmuch-result . consult-notmuch-export)))
 
 ;;;###autoload
 (defun consult-notmuch (&optional initial)
@@ -277,7 +278,11 @@ If given, use INITIAL as the starting point of the query."
   (let ((other-headers
    (and notmuch-always-prompt-for-sender
 	(list (cons 'From (notmuch-mua-prompt-for-sender))))))
-    (notmuch-mua-mail address nil other-headers nil (notmuch-mua-get-switch-function))))
+    (notmuch-mua-mail address
+                      nil
+                      other-headers
+                      nil
+                      (notmuch-mua-get-switch-function))))
 
 (defun consult-notmuch--address-prompt ()
   (consult--read (consult--async-command
@@ -289,7 +294,8 @@ If given, use INITIAL as the starting point of the query."
 ;;;###autoload
 (defun consult-notmuch-address (&optional multi-select-p initial-addr)
   "Search through the notmuch database for an email address and compose mail to it.
-With a prefix argument, prompt multiple times until there is an empty input."
+With a prefix argument, prompt multiple times until there
+is an empty input."
   (interactive "P")
   (if multi-select-p
       (cl-loop for addr = (consult-notmuch--address-prompt)
@@ -302,9 +308,6 @@ With a prefix argument, prompt multiple times until there is an empty input."
 				     addrs)
 				   ", ")))
     (consult-notmuch-address-compose (consult-notmuch--address-prompt))))
-
-
-
 
 
 (defun consult-notmuch--interesting-buffers ()
