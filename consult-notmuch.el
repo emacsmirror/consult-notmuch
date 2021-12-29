@@ -276,7 +276,7 @@ If given, use INITIAL as the starting point of the query."
 (defun consult-notmuch-address-compose (address)
   "Compose an email to a given ADDRESS."
   (let ((other-headers (and notmuch-always-prompt-for-sender
-	                    `((From . ,(notmuch-mua-prompt-for-sender))))))
+                            `((From . ,(notmuch-mua-prompt-for-sender))))))
     (notmuch-mua-mail address
                       nil
                       other-headers
@@ -284,11 +284,10 @@ If given, use INITIAL as the starting point of the query."
                       (notmuch-mua-get-switch-function))))
 
 (defun consult-notmuch--address-prompt ()
-  (consult--read (consult--async-command
-		     #'consult-notmuch--address-command)
-		 :prompt "Notmuch addresses: "
-		 :sort nil
-		 :category 'notmuch-address))
+  (consult--read (consult--async-command #'consult-notmuch--address-command)
+                 :prompt "Notmuch addresses: "
+                 :sort nil
+                 :category 'notmuch-address))
 
 ;;;###autoload
 (defun consult-notmuch-address (&optional multi-select-p initial-addr)
@@ -298,14 +297,14 @@ is an empty input."
   (interactive "P")
   (if multi-select-p
       (cl-loop for addr = (consult-notmuch--address-prompt)
-	       until (eql (length addr) 0)
-	       collect addr into addrs
-	       finally (consult-notmuch-address-compose
-			(mapconcat #'identity
-				   (if initial-addr
-				       (cons initial-addr addrs)
-				     addrs)
-				   ", ")))
+               until (eql (length addr) 0)
+               collect addr into addrs
+               finally (consult-notmuch-address-compose
+                        (mapconcat #'identity
+                                   (if initial-addr
+                                       (cons initial-addr addrs)
+                                     addrs)
+                                   ", ")))
     (consult-notmuch-address-compose (consult-notmuch--address-prompt))))
 
 
