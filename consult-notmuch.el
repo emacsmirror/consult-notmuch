@@ -274,10 +274,9 @@ If given, use INITIAL as the starting point of the query."
   `("notmuch" "address" "--format=text" ,input))
 
 (defun consult-notmuch-address-compose (address)
-  "Compose an email to a given address"
-  (let ((other-headers
-   (and notmuch-always-prompt-for-sender
-	(list (cons 'From (notmuch-mua-prompt-for-sender))))))
+  "Compose an email to a given ADDRESS."
+  (let ((other-headers (and notmuch-always-prompt-for-sender
+	                    `((From . ,(notmuch-mua-prompt-for-sender))))))
     (notmuch-mua-mail address
                       nil
                       other-headers
@@ -293,7 +292,7 @@ If given, use INITIAL as the starting point of the query."
 
 ;;;###autoload
 (defun consult-notmuch-address (&optional multi-select-p initial-addr)
-  "Search through the notmuch database for an email address and compose mail to it.
+  "Search the notmuch db for an email address and compose mail to it.
 With a prefix argument, prompt multiple times until there
 is an empty input."
   (interactive "P")
