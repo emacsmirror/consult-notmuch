@@ -4,7 +4,7 @@
 ;; Maintainer: Jose A Ortega Ruiz
 ;; Keywords: mail
 ;; License: GPL-3.0-or-later
-;; Version: 0.6
+;; Version: 0.7
 ;; Package-Requires: ((emacs "26.1") (consult "0.9") (notmuch "0.31"))
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
