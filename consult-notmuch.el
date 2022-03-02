@@ -248,9 +248,13 @@ If given, use INITIAL as the starting point of the query."
                 (tag-changes (notmuch-read-tag-changes tags "Tags: " "+")))
       (notmuch-tag (concat "(" thread-id ")") tag-changes)))
   
+  (defvar consult-notmuch-export-function #'notmuch-search
+    "Function used to ask notmuch to display a list of found ids.
+  Typical options are notmuch-search and notmuch-tree.")
+  
   (defun consult-notmuch-export (msgs)
     "Create a notmuch search buffer listing messages."
-    (notmuch-search
+    (funcall consult-notmuch-export-function
      (concat "(" (mapconcat #'consult-notmuch--thread-id msgs " ") ")")))
   (add-to-list 'embark-exporters-alist
                '(notmuch-result . consult-notmuch-export)))

@@ -592,12 +592,16 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 *** Embark export
 
     To export search results to a notmuch search buffer with Embark,
-    we can define an exporter:
+    we can define a configurable exporter:
 
     #+begin_src emacs-lisp :noweb-ref embark-actions
+      (defvar consult-notmuch-export-function #'notmuch-search
+        "Function used to ask notmuch to display a list of found ids.
+      Typical options are notmuch-search and notmuch-tree.")
+
       (defun consult-notmuch-export (msgs)
         "Create a notmuch search buffer listing messages."
-        (notmuch-search
+        (funcall consult-notmuch-export-function
          (concat "(" (mapconcat #'consult-notmuch--thread-id msgs " ") ")")))
     #+end_src
 
