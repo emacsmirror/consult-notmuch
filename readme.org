@@ -449,39 +449,25 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
 ***** Previews
 
-      We're going to use always the same buffer for previews, and
-      close it when we're done:
+      We're going to use always the same buffer for previews, closing
+      it when we're done, and use ~notmuch-show~ to show a candidate.
+      Remember that we've stashed the message or thread id needed by
+      that function as a property of of our candidate string, and
+      provided an accessor for it, so we have all the ingredients:
 
       #+begin_src emacs-lisp
 
         (defvar consult-notmuch--buffer-name "*consult-notmuch*"
           "Name of preview and result buffers.")
 
-        (defun consult-notmuch--close-preview ()
-          "Close the message preview, by killing its buffer."
-          (when (get-buffer consult-notmuch--buffer-name)
-            (kill-buffer consult-notmuch--buffer-name)))
+        (defun consult-notmuch--preview (action candidate)
+          "Preview CANDIDATE when ACTION is 'preview."
+          (when (eq action 'preview)
+            (when-let ((thread-id (consult-notmuch--thread-id candidate)))
+              (notmuch-show thread-id nil nil nil
+                            consult-notmuch--buffer-name))))
 
       #+end_src
-
-      and use ~notmuch-show~ to show a candidate.
-
-      Remember that we've stashed the message or thread id needed by
-      that function as a property of of our candidate string, and
-      provided an accessor for it:
-
-      #+begin_src emacs-lisp
-
-        (defun consult-notmuch--preview (candidate _restore)
-          "Open resulting CANDIDATE in ‘notmuch-show’ view, in a preview buffer."
-          (consult-notmuch--close-preview)
-          (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-            (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
-
-      #+end_src
-
-      The additional ~_restore~ argument it's used by ~consult~ when we
-      install the function above via ~consult--read~'s =:state= keyword.
 
 ***** Messages and trees
 
@@ -660,7 +646,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     #+begin_src emacs-lisp :noweb-ref package-boilerplate
 
-      ;; Copyright (C) 2021  Jose A Ortega Ruiz
+      ;; Copyright (C) 2021, 2022  Jose A Ortega Ruiz
 
       ;; This program is free software; you can redistribute it and/or modify
       ;; it under the terms of the GNU General Public License as published by

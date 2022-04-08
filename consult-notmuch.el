@@ -9,7 +9,7 @@
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
 
-;; Copyright (C) 2021  Jose A Ortega Ruiz
+;; Copyright (C) 2021, 2022  Jose A Ortega Ruiz
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -185,17 +185,12 @@ If given, use INITIAL as the starting point of the query."
 (defvar consult-notmuch--buffer-name "*consult-notmuch*"
   "Name of preview and result buffers.")
 
-(defun consult-notmuch--close-preview ()
-  "Close the message preview, by killing its buffer."
-  (when (get-buffer consult-notmuch--buffer-name)
-    (kill-buffer consult-notmuch--buffer-name)))
-
-
-(defun consult-notmuch--preview (candidate _restore)
-  "Open resulting CANDIDATE in ‘notmuch-show’ view, in a preview buffer."
-  (consult-notmuch--close-preview)
-  (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-    (notmuch-show thread-id nil nil nil consult-notmuch--buffer-name)))
+(defun consult-notmuch--preview (action candidate)
+  "Preview CANDIDATE when ACTION is 'preview."
+  (when (eq action 'preview)
+    (when-let ((thread-id (consult-notmuch--thread-id candidate)))
+      (notmuch-show thread-id nil nil nil
+                    consult-notmuch--buffer-name))))
 
 
 (defun consult-notmuch--show (candidate)
