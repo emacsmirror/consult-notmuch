@@ -147,7 +147,7 @@ If given, use INITIAL as the starting point of the query."
           ((string-prefix-p "header{" str)
            (setq consult-notmuch--info t))
           ((and str consult-notmuch--info)
-           (when (string-match "\\(.+\\) (\\([^)]+\\)) (\\([^)]+\\))$" str)
+           (when (string-match "\\(.+\\) (\\([^)]+\\)) (\\([^)]*\\))$" str)
              (consult-notmuch--set :Subject (match-string 1 str))
              (consult-notmuch--set :date_relative (match-string 2 str))
              (consult-notmuch--set :tags (split-string (match-string 3 str))))
@@ -171,7 +171,7 @@ If given, use INITIAL as the starting point of the query."
            (auths (string-trim (nth 1 (split-string mid "[];]"))))
            (subject (string-trim (nth 1 (split-string mid "[;]"))))
            (headers (list :Subject subject :From auths))
-           (t0 (string-match "([^)]+)\\s-*$" mid))
+           (t0 (string-match "([^)]*)\\s-*$" mid))
            (tags (split-string (substring mid (1+  t0) -1)))
            (msg (list :id thread-id
                       :match t
