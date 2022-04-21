@@ -195,7 +195,6 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--show (candidate)
   "Open resulting CANDIDATE in ‘notmuch-show’ view."
-  (consult-notmuch--close-preview)
   (when-let ((thread-id (consult-notmuch--thread-id candidate)))
     (let* ((notmuch-show-only-matching-messages
             consult-notmuch-show-single-message)
@@ -206,7 +205,6 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--tree (candidate)
   "Open resulting CANDIDATE in ‘notmuch-tree’."
-  (consult-notmuch--close-preview)
   (when-let ((thread-id (consult-notmuch--thread-id candidate)))
     (notmuch-tree thread-id nil nil)))
 
