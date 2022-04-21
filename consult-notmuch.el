@@ -187,10 +187,15 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--preview (action candidate)
   "Preview CANDIDATE when ACTION is 'preview."
-  (when (eq action 'preview)
-    (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-      (notmuch-show thread-id nil nil nil
-                    consult-notmuch--buffer-name))))
+  (cond ((eq action 'preview)
+         (when-let ((thread-id (consult-notmuch--thread-id candidate)))
+           (when (get-buffer consult-notmuch--buffer-name)
+             (kill-buffer consult-notmuch--buffer-name))
+           (notmuch-show thread-id nil nil nil
+                         consult-notmuch--buffer-name)))
+        ((eq action 'exit)
+         (when (get-buffer consult-notmuch--buffer-name)
+           (kill-buffer consult-notmuch--buffer-name)))))
 
 
 (defun consult-notmuch--show (candidate)
