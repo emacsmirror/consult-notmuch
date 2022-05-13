@@ -113,12 +113,15 @@ If given, use INITIAL as the starting point of the query."
       (dolist (spec consult-notmuch-result-format)
         (when-let (field (consult-notmuch--format-field spec msg))
           (setq result-string (concat result-string field))))
-      (propertize result-string 'thread-id id
-                  'tags (plist-get msg :tags)))))
+      (propertize result-string 'id id 'tags (plist-get msg :tags)))))
 
-(defun consult-notmuch--thread-id (candidate)
+(defun consult-notmuch--candidate-id (candidate)
   "Recover the thread id for the given CANDIDATE string."
-  (when candidate (get-text-property 0 'thread-id candidate)))
+  (when candidate (get-text-property 0 'id candidate)))
+
+(defun consult-notmuch--candidate-tags (candidate)
+  "Recover the message tags for the given CANDIDATE string."
+  (when candidate (get-text-property 0 'tags candidate)))
 
 (defvar consult-notmuch--partial-parse nil
   "Internal variable for parsing status.")
@@ -162,7 +165,7 @@ If given, use INITIAL as the starting point of the query."
 (defun consult-notmuch--search-transformer (str)
   "Transform STR from notmuch search to notmuch display style."
   (when (string-match "thread:" str)
-    (let* ((thread-id (car (split-string str "\\ +")))
+    (let* ((id (car (split-string str "\\ +")))
            (date (substring str 24 37))
            (mid (substring str 24))
            (c0 (string-match "[[]" mid))
@@ -173,7 +176,7 @@ If given, use INITIAL as the starting point of the query."
            (headers (list :Subject subject :From auths))
            (t0 (string-match "([^)]*)\\s-*$" mid))
            (tags (split-string (substring mid (1+  t0) -1)))
-           (msg (list :id thread-id
+           (msg (list :id id
                       :match t
                       :headers headers
                       :count count
@@ -185,14 +188,19 @@ If given, use INITIAL as the starting point of the query."
 (defvar consult-notmuch--buffer-name "*consult-notmuch*"
   "Name of preview and result buffers.")
 
+(defun consult-notmuch--show-id (id buffer)
+  "Show message or thread id in the requested buffer"
+  (let ((notmuch-show-only-matching-messages
+         consult-notmuch-show-single-message))
+    (notmuch-show id nil nil nil buffer)))
+
 (defun consult-notmuch--preview (action candidate)
   "Preview CANDIDATE when ACTION is 'preview."
   (cond ((eq action 'preview)
-         (when-let ((thread-id (consult-notmuch--thread-id candidate)))
+         (when-let ((id (consult-notmuch--candidate-id candidate)))
            (when (get-buffer consult-notmuch--buffer-name)
              (kill-buffer consult-notmuch--buffer-name))
-           (notmuch-show thread-id nil nil nil
-                         consult-notmuch--buffer-name)))
+           (consult-notmuch--show-id id consult-notmuch--buffer-name)))
         ((eq action 'exit)
          (when (get-buffer consult-notmuch--buffer-name)
            (kill-buffer consult-notmuch--buffer-name)))))
@@ -200,17 +208,15 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--show (candidate)
   "Open resulting CANDIDATE in ‘notmuch-show’ view."
-  (when-let ((thread-id (consult-notmuch--thread-id candidate)))
-    (let* ((notmuch-show-only-matching-messages
-            consult-notmuch-show-single-message)
-           (subject (car (last (split-string candidate "\t"))))
+  (when-let ((id (consult-notmuch--candidate-id candidate)))
+    (let* ((subject (car (last (split-string candidate "\t"))))
            (title (concat consult-notmuch--buffer-name " " subject)))
-      (notmuch-show thread-id nil nil nil title))))
+      (consult-notmuch--show-id id title))))
 
 
 (defun consult-notmuch--tree (candidate)
   "Open resulting CANDIDATE in ‘notmuch-tree’."
-  (when-let ((thread-id (consult-notmuch--thread-id candidate)))
+  (when-let ((thread-id (consult-notmuch--candidate-id candidate)))
     (notmuch-tree thread-id nil nil)))
 
 
@@ -241,10 +247,10 @@ If given, use INITIAL as the starting point of the query."
                '(notmuch-address . consult-notmuch-address-map))
   
   (defun consult-notmuch-tag (msg)
-    (when-let* ((thread-id (consult-notmuch--thread-id msg))
-                (tags (get-text-property 0 'tags msg))
+    (when-let* ((id (consult-notmuch--candidate-id msg))
+                (tags (consult-notmuch--candidate-tags msg))
                 (tag-changes (notmuch-read-tag-changes tags "Tags: " "+")))
-      (notmuch-tag (concat "(" thread-id ")") tag-changes)))
+      (notmuch-tag (concat "(" id ")") tag-changes)))
   
   (defvar consult-notmuch-export-function #'notmuch-search
     "Function used to ask notmuch to display a list of found ids.
@@ -253,7 +259,7 @@ If given, use INITIAL as the starting point of the query."
   (defun consult-notmuch-export (msgs)
     "Create a notmuch search buffer listing messages."
     (funcall consult-notmuch-export-function
-     (concat "(" (mapconcat #'consult-notmuch--thread-id msgs " ") ")")))
+     (concat "(" (mapconcat #'consult-notmuch--candidate-id msgs " ") ")")))
   (add-to-list 'embark-exporters-alist
                '(notmuch-result . consult-notmuch-export)))
 
