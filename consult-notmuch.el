@@ -66,8 +66,8 @@ Supported fields are: date, authors, subject, count and tags."
 (defun consult-notmuch--command (input)
   "Construct a search command for emails containing INPUT."
   (if consult-notmuch-show-single-message
-      `("notmuch" "show" "--body=false" ,input)
-    `("notmuch" "search" ,input)))
+      `(,notmuch-command "show" "--body=false" ,input)
+    `(,notmuch-command "search" ,input)))
 
 (defun consult-notmuch--search (&optional initial)
   "Perform an asynchronous notmuch search via `consult--read'.
@@ -279,7 +279,7 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--address-command (input)
   "Spec for an async command querying a notmuch address with INPUT."
-  `("notmuch" "address" "--format=text" ,input))
+  `(,notmuch-command "address" "--format=text" ,input))
 
 (defun consult-notmuch-address-compose (address)
   "Compose an email to a given ADDRESS."
