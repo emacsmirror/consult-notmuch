@@ -246,6 +246,16 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     which has the same semantics as ~notmuch-search-result-format~.
 
+    And we can also add a flag that tells us whether to show the oldest or the
+    newest messages matching a search first:
+
+    #+begin_src emacs-lisp
+      (defcustom consult-notmuch-newest-first t
+        "List messages newest first (defaults to oldest first)."
+        :type 'boolean)
+
+    #+end_src
+
 * Implementation
   :PROPERTIES:
   :header-args: :noweb-ref private-functions
@@ -263,9 +273,12 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
     #+begin_src emacs-lisp
       (defun consult-notmuch--command (input)
         "Construct a search command for emails containing INPUT."
-        (if consult-notmuch-show-single-message
-            `(,notmuch-command "show" "--body=false" ,input)
-          `(,notmuch-command "search" ,input)))
+        (let ((sort (if consult-notmuch-newest-first
+                        "--sort=newest-first"
+                      "--sort=oldest-first")))
+          (if consult-notmuch-show-single-message
+              `(,notmuch-command "show" "--body=false" ,sort ,input)
+            `(,notmuch-command "search" ,sort ,input))))
 
       (defun consult-notmuch--search (&optional initial)
         "Perform an asynchronous notmuch search via `consult--read'.

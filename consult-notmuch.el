@@ -62,12 +62,19 @@
 Supported fields are: date, authors, subject, count and tags."
   :type '(alist :key-type string :value-type string))
 
+(defcustom consult-notmuch-newest-first t
+  "List messages newest first (defaults to oldest first)."
+  :type 'boolean)
+
 
 (defun consult-notmuch--command (input)
   "Construct a search command for emails containing INPUT."
-  (if consult-notmuch-show-single-message
-      `(,notmuch-command "show" "--body=false" ,input)
-    `(,notmuch-command "search" ,input)))
+  (let ((sort (if consult-notmuch-newest-first
+                  "--sort=newest-first"
+                "--sort=oldest-first")))
+    (if consult-notmuch-show-single-message
+        `(,notmuch-command "show" "--body=false" ,sort ,input)
+      `(,notmuch-command "search" ,sort ,input))))
 
 (defun consult-notmuch--search (&optional initial)
   "Perform an asynchronous notmuch search via `consult--read'.
