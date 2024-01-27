@@ -9,7 +9,7 @@
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
 
-;; Copyright (C) 2021, 2022  Jose A Ortega Ruiz
+;; Copyright (C) 2021, 2022, 2024  Jose A Ortega Ruiz
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
