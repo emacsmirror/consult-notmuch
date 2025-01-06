@@ -66,6 +66,10 @@ Supported fields are: date, authors, subject, count and tags."
   "List messages newest first (defaults to oldest first)."
   :type 'boolean)
 
+(defcustom consult-notmuch-min-input consult-async-min-input
+  "Minimun input length to launch a notmuch search"
+  :type '(natnum :tag "Number of characters"))
+
 
 (defun consult-notmuch--command (input)
   "Construct a search command for emails containing INPUT."
@@ -80,13 +84,15 @@ Supported fields are: date, authors, subject, count and tags."
   "Perform an asynchronous notmuch search via `consult--read'.
 If given, use INITIAL as the starting point of the query."
   (setq consult-notmuch--partial-parse nil)
-  (consult--read (consult--async-command
-                     #'consult-notmuch--command
-                   (consult--async-filter #'identity)
-                   (consult--async-map #'consult-notmuch--transformer))
+  (consult--read (consult--async-pipeline
+                  (consult--async-min-input consult-notmuch-min-input)
+                  (consult--async-throttle)
+                  (consult--async-process #'consult-notmuch--command)
+                  (consult--async-map #'consult-notmuch--transformer)
+                  (consult--async-filter #'identity))
                  :prompt "Notmuch search: "
                  :require-match t
-                 :initial (consult--async-split-initial initial)
+                 :initial initial
                  :history '(:input consult-notmuch-history)
                  :state #'consult-notmuch--preview
                  :lookup #'consult--lookup-member
@@ -299,7 +305,10 @@ If given, use INITIAL as the starting point of the query."
                       (notmuch-mua-get-switch-function))))
 
 (defun consult-notmuch--address-prompt ()
-  (consult--read (consult--async-command #'consult-notmuch--address-command)
+  (consult--read (consult--async-pipeline
+                  (consult--async-min-input)
+                  (consult--async-throttle)
+                  (consult--async-process #'consult-notmuch--address-command))
                  :prompt "Notmuch addresses: "
                  :sort nil
                  :category 'notmuch-address))

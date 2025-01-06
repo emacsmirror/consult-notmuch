@@ -117,12 +117,11 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
           (completing-read "Notmuch address: " (split-string res "\n"))))
     #+end_src
 
-    If your notmuch database is not that big, this approach actually
-    works reasonably well, but it doesn't scale with its size.  That's
-    where an asynchronous command can help: we call the shell command
-    as the input varies, collecting and displaying the results as
-    they're available.  Here's how that looks using consult
-    asynchronous command infrastructure:
+    If your notmuch database is not that big, this approach actually works
+    reasonably well, but it doesn't scale with its size.  That's where an
+    asynchronous command can help: we call the shell command as the input
+    varies, collecting and displaying the results as they're available.
+    Here's how that looks using consult's asynchronous command infrastructure:
 
     #+begin_src emacs-lisp :noweb-ref public-functions
       (defun consult-notmuch--address-command (input)
@@ -140,7 +139,10 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
                             (notmuch-mua-get-switch-function))))
 
       (defun consult-notmuch--address-prompt ()
-        (consult--read (consult--async-command #'consult-notmuch--address-command)
+        (consult--read (consult--async-pipeline
+                        (consult--async-min-input)
+                        (consult--async-throttle)
+                        (consult--async-process #'consult-notmuch--address-command))
                        :prompt "Notmuch addresses: "
                        :sort nil
                        :category 'notmuch-address))
@@ -256,19 +258,33 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     #+end_src
 
+    Launching notmuch searches can be costly, and we probably to start them
+    with too short an input. By default, we'll use ~consult-async-min-input~
+    value, but let the user customize it with this variable:
+
+    #+begin_src emacs-lisp
+      (defcustom consult-notmuch-min-input consult-async-min-input
+        "Minimun input length to launch a notmuch search"
+        :type '(natnum :tag "Number of characters"))
+
+    #+end_src
+
 * Implementation
   :PROPERTIES:
   :header-args: :noweb-ref private-functions
   :END:
 *** Consult search function
-    The core of our implementation should a call to ~consult--read~ with
-    a closure to obtain completion candidates based on a call to
-    =notmuch search= or =notmuch show= as an asynchronous process.  For
-    that, we'll use consult's helper ~consult--async-command.~ This
-    function takes as first argument a string representing the command
-    to be called to obtain completion candidates, followed by any
-    transformations we want to apply to them before being displayed.
-    Thus, our candidates generator will look like:
+    The core of our implementation should a call to ~consult--read~ with a
+    closure to obtain completion candidates based on a call to =notmuch search=
+    or =notmuch show= as an asynchronous process.  For that, we'll use consult's
+    helper ~consult--async-pipeline.~ This function creates a pipeline producing
+    the list of options presented to the user. We ensure a minimal input to
+    start the command and apply a throttle before launching the notmuch search
+    process via ~consult--async-process~. This function takes as argument a
+    string representing the command to be called to obtain completion
+    candidates. After that, we complete the pipeline with any transformations
+    we want to apply to the process outputs before being displayed.  Thus, our
+    candidates generator will look like:
 
     #+begin_src emacs-lisp
       (defun consult-notmuch--command (input)
@@ -284,13 +300,15 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
         "Perform an asynchronous notmuch search via `consult--read'.
       If given, use INITIAL as the starting point of the query."
         (setq consult-notmuch--partial-parse nil)
-        (consult--read (consult--async-command
-                           #'consult-notmuch--command
-                         (consult--async-filter #'identity)
-                         (consult--async-map #'consult-notmuch--transformer))
+        (consult--read (consult--async-pipeline
+                        (consult--async-min-input consult-notmuch-min-input)
+                        (consult--async-throttle)
+                        (consult--async-process #'consult-notmuch--command)
+                        (consult--async-map #'consult-notmuch--transformer)
+                        (consult--async-filter #'identity))
                        :prompt "Notmuch search: "
                        :require-match t
-                       :initial (consult--async-split-initial initial)
+                       :initial initial
                        :history '(:input consult-notmuch-history)
                        :state #'consult-notmuch--preview
                        :lookup #'consult--lookup-member
@@ -668,7 +686,7 @@ The package's elisp code is tangled from [[https://codeberg.org/jao/consult-notm
 
     #+begin_src emacs-lisp :noweb-ref package-boilerplate
 
-      ;; Copyright (C) 2021, 2022, 2024  Jose A Ortega Ruiz
+      ;; Copyright (C) 2021, 2022, 2024, 2025  Jose A Ortega Ruiz
 
       ;; This program is free software; you can redistribute it and/or modify
       ;; it under the terms of the GNU General Public License as published by
