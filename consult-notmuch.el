@@ -9,7 +9,7 @@
 ;; Homepage: https://codeberg.org/jao/consult-notmuch
 
 
-;; Copyright (C) 2021, 2022, 2024  Jose A Ortega Ruiz
+;; Copyright (C) 2021, 2022, 2024, 2025  Jose A Ortega Ruiz
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -85,9 +85,9 @@ Supported fields are: date, authors, subject, count and tags."
 If given, use INITIAL as the starting point of the query."
   (setq consult-notmuch--partial-parse nil)
   (consult--read (consult--async-pipeline
-                  (consult--async-min-input consult-notmuch-min-input)
-                  (consult--async-throttle)
-                  (consult--async-process #'consult-notmuch--command)
+                  (consult--process-collection #'consult-notmuch--command
+                                               :min-input
+                                               consult-notmuch-min-input)
                   (consult--async-map #'consult-notmuch--transformer)
                   (consult--async-filter #'identity))
                  :prompt "Notmuch search: "
@@ -306,9 +306,8 @@ If given, use INITIAL as the starting point of the query."
 
 (defun consult-notmuch--address-prompt ()
   (consult--read (consult--async-pipeline
-                  (consult--async-min-input)
-                  (consult--async-throttle)
-                  (consult--async-process #'consult-notmuch--address-command))
+                  (consult--process-collection
+                   #'consult-notmuch--address-command))
                  :prompt "Notmuch addresses: "
                  :sort nil
                  :category 'notmuch-address))
